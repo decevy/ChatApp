@@ -1,0 +1,11 @@
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Core/bin/Debug/net9.0/ChatApp.Core.deps.json
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Core/bin/Debug/net9.0/ChatApp.Core.dll
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Core/bin/Debug/net9.0/ChatApp.Core.pdb
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Core/obj/Debug/net9.0/ChatApp.Core.GeneratedMSBuildEditorConfig.editorconfig
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Core/obj/Debug/net9.0/ChatApp.Core.AssemblyInfoInputs.cache
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Core/obj/Debug/net9.0/ChatApp.Core.AssemblyInfo.cs
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Core/obj/Debug/net9.0/ChatApp.Core.csproj.CoreCompileInputs.cache
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Core/obj/Debug/net9.0/ChatApp.Core.dll
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Core/obj/Debug/net9.0/refint/ChatApp.Core.dll
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Core/obj/Debug/net9.0/ChatApp.Core.pdb
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Core/obj/Debug/net9.0/ref/ChatApp.Core.dll

@@ -1,0 +1,15 @@
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Infrastructure/bin/Debug/net9.0/ChatApp.Infrastructure.deps.json
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Infrastructure/bin/Debug/net9.0/ChatApp.Infrastructure.dll
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Infrastructure/bin/Debug/net9.0/ChatApp.Infrastructure.pdb
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Infrastructure/bin/Debug/net9.0/ChatApp.Core.dll
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Infrastructure/bin/Debug/net9.0/ChatApp.Core.pdb
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Infrastructure/obj/Debug/net9.0/ChatApp.Infrastructure.csproj.AssemblyReference.cache
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Infrastructure/obj/Debug/net9.0/ChatApp.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Infrastructure/obj/Debug/net9.0/ChatApp.Infrastructure.AssemblyInfoInputs.cache
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Infrastructure/obj/Debug/net9.0/ChatApp.Infrastructure.AssemblyInfo.cs
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Infrastructure/obj/Debug/net9.0/ChatApp.Infrastructure.csproj.CoreCompileInputs.cache
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Infrastructure/obj/Debug/net9.0/ChatApp..20B20D2C.Up2Date
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Infrastructure/obj/Debug/net9.0/ChatApp.Infrastructure.dll
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Infrastructure/obj/Debug/net9.0/refint/ChatApp.Infrastructure.dll
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Infrastructure/obj/Debug/net9.0/ChatApp.Infrastructure.pdb
+/Users/lau/Projects/dotnet/ChatApp/ChatApp.Infrastructure/obj/Debug/net9.0/ref/ChatApp.Infrastructure.dll
