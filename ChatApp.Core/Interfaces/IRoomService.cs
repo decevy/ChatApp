@@ -1,4 +1,4 @@
-using ChatApp.Core.DTOs;
+using ChatApp.Core.Dtos;
 
 namespace ChatApp.Core.Interfaces;
 

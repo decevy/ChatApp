@@ -1,4 +1,4 @@
-namespace ChatApp.Core.DTOs;
+namespace ChatApp.Core.Dtos;
 
 public class TypingIndicatorDto
 {
