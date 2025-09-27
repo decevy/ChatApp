@@ -1,4 +1,5 @@
 using ChatApp.Core.Dtos;
+using ChatApp.Core.Dtos.Requests;
 
 namespace ChatApp.Core.Interfaces;
 
