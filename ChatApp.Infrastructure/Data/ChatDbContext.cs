@@ -3,12 +3,8 @@ using ChatApp.Core.Entities;
 
 namespace ChatApp.Infrastructure.Data;
 
-public class ChatDbContext : DbContext
+public class ChatDbContext(DbContextOptions<ChatDbContext> options) : DbContext(options)
 {
-    public ChatDbContext(DbContextOptions<ChatDbContext> options) : base(options)
-    {
-    }
-
     public DbSet<User> Users { get; set; }
     public DbSet<Room> Rooms { get; set; }
     public DbSet<Message> Messages { get; set; }

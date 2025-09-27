@@ -7,16 +7,16 @@ namespace ChatApp.Infrastructure.Repositories;
 
 public class MessageRepository : IMessageRepository
 {
-    private readonly ChatDbContext _context;
+    private readonly ChatDbContext context;
 
     public MessageRepository(ChatDbContext context)
     {
-        _context = context;
+        this.context = context;
     }
 
     public async Task<Message?> GetByIdAsync(int id)
     {
-        return await _context.Messages
+        return await context.Messages
             .Include(m => m.User)
             .Include(m => m.Reactions)
                 .ThenInclude(r => r.User)
@@ -25,7 +25,7 @@ public class MessageRepository : IMessageRepository
 
     public async Task<IEnumerable<Message>> GetRoomMessagesAsync(int roomId, int page = 1, int pageSize = 50)
     {
-        return await _context.Messages
+        return await context.Messages
             .Include(m => m.User)
             .Include(m => m.Reactions)
                 .ThenInclude(r => r.User)
@@ -38,8 +38,8 @@ public class MessageRepository : IMessageRepository
 
     public async Task<Message> CreateAsync(Message message)
     {
-        _context.Messages.Add(message);
-        await _context.SaveChangesAsync();
+        context.Messages.Add(message);
+        await context.SaveChangesAsync();
         
         // Return the message with includes
         return await GetByIdAsync(message.Id) ?? message;
@@ -47,23 +47,23 @@ public class MessageRepository : IMessageRepository
 
     public async Task UpdateAsync(Message message)
     {
-        _context.Entry(message).State = EntityState.Modified;
-        await _context.SaveChangesAsync();
+        context.Entry(message).State = EntityState.Modified;
+        await context.SaveChangesAsync();
     }
 
     public async Task DeleteAsync(int id)
     {
-        var message = await _context.Messages.FindAsync(id);
+        var message = await context.Messages.FindAsync(id);
         if (message != null)
         {
-            _context.Messages.Remove(message);
-            await _context.SaveChangesAsync();
+            context.Messages.Remove(message);
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task<Message?> GetLastMessageInRoomAsync(int roomId)
     {
-        return await _context.Messages
+        return await context.Messages
             .Include(m => m.User)
             .Where(m => m.RoomId == roomId)
             .OrderByDescending(m => m.CreatedAt)
