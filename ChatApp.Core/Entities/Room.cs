@@ -18,7 +18,7 @@ public class Room
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     
     // Navigation properties
-    public User Creator { get; set; } = null!;
+    public required User Creator { get; set; }
     public ICollection<Message> Messages { get; set; } = [];
     public ICollection<RoomMember> Members { get; set; } = [];
 }

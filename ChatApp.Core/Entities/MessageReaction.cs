@@ -9,6 +9,6 @@ public class MessageReaction
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     
     // Navigation properties
-    public Message Message { get; set; } = null!;
-    public User User { get; set; } = null!;
+    public required Message Message { get; set; }
+    public required User User { get; set; }
 }

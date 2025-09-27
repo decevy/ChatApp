@@ -9,6 +9,6 @@ public class RoomMember
     public RoomRole Role { get; set; } = RoomRole.Member;
     
     // Navigation properties
-    public User User { get; set; } = null!;
-    public Room Room { get; set; } = null!;
+    public required User User { get; set; }
+    public required Room Room { get; set; }
 }

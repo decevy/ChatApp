@@ -17,9 +17,9 @@ public class Message
     public string? AttachmentUrl { get; set; }
     public string? AttachmentFileName { get; set; }
     public MessageType Type { get; set; } = MessageType.Text;
-    
+
     // Navigation properties
-    public User User { get; set; } = null!;
-    public Room Room { get; set; } = null!;
+    public required User User { get; set; }
+    public required Room Room { get; set; }
     public ICollection<MessageReaction> Reactions { get; set; } = [];
 }
