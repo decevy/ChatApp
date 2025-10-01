@@ -98,23 +98,22 @@ public class ChatDbContext(DbContextOptions<ChatDbContext> options) : DbContext(
             entity.HasIndex(mr => new { mr.MessageId, mr.UserId, mr.Emoji }).IsUnique();
         });
 
-        // Seed data
-        SeedData(modelBuilder);
+        // Todo: Seed data
     }
 
-    private static void SeedData(ModelBuilder modelBuilder)
-    {
-        // Seed a default "General" room
-        modelBuilder.Entity<Room>().HasData(
-            new Room
-            {
-                Id = 1,
-                Name = "General",
-                Description = "Default chat room for everyone",
-                IsPrivate = false,
-                CreatedBy = 1, // We'll create a system user
-                CreatedAt = DateTime.UtcNow
-            }
-        );
-    }
+    // private static void SeedData(ModelBuilder modelBuilder)
+    // {
+    //     // Seed a default "General" room
+    //     modelBuilder.Entity<Room>().HasData(
+    //         new Room
+    //         {
+    //             Id = 1,
+    //             Name = "General",
+    //             Description = "Default chat room for everyone",
+    //             IsPrivate = false,
+    //             CreatedBy = 1, // We'll create a system user
+    //             CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+    //         }
+    //     );
+    // }
 }
