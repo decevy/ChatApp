@@ -5,15 +5,8 @@ using ChatApp.Infrastructure.Data;
 
 namespace ChatApp.Infrastructure.Repositories;
 
-public class MessageRepository : IMessageRepository
+public class MessageRepository(ChatDbContext context) : IMessageRepository
 {
-    private readonly ChatDbContext context;
-
-    public MessageRepository(ChatDbContext context)
-    {
-        this.context = context;
-    }
-
     public async Task<Message?> GetByIdAsync(int id)
     {
         return await context.Messages
