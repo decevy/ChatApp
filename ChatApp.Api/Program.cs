@@ -5,6 +5,7 @@ using System.Text;
 using ChatApp.Infrastructure.Data;
 using ChatApp.Core.Interfaces;
 using ChatApp.Infrastructure.Repositories;
+using ChatApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,9 @@ builder.Services.AddDbContext<ChatDbContext>(options =>
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRoomRepository, RoomRepository>();
 builder.Services.AddScoped<IMessageRepository, MessageRepository>();
+
+// Service registrations
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

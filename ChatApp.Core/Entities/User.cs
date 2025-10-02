@@ -22,6 +22,10 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime LastSeen { get; set; } = DateTime.UtcNow;
     public bool IsOnline { get; set; }
+    
+    // Refresh token fields
+    public string? RefreshToken { get; set; }
+    public DateTime? RefreshTokenExpiry { get; set; }
 
     // Navigation properties
     public ICollection<Message> Messages { get; set; } = [];

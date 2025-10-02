@@ -22,6 +22,11 @@ public class UserRepository(ChatDbContext context) : IUserRepository
         return await context.Users.FirstOrDefaultAsync(u => u.Username == username);
     }
 
+    public async Task<User?> GetByRefreshTokenAsync(string refreshToken)
+    {
+        return await context.Users.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
+    }
+
     public async Task<IEnumerable<User>> GetAllAsync()
     {
         return await context.Users.ToListAsync();
