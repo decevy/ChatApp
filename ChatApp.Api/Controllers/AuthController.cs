@@ -92,7 +92,6 @@ public class AuthController(IAuthService authService, ILogger<AuthController> lo
         }
     }
 
-    // todo: find out when to use this
     [Authorize]
     [HttpGet("me")]
     public IActionResult GetCurrentUser()
