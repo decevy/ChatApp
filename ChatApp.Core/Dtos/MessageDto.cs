@@ -13,5 +13,18 @@ public class MessageDto
     public string? AttachmentUrl { get; set; }
     public string? AttachmentFileName { get; set; }
     public MessageType Type { get; set; }
-    public List<MessageReactionDto> Reactions { get; set; } = new();
+    public List<MessageReactionDto> Reactions { get; set; } = [];
+
+    public static MessageDto FromEntity(Message message) => new()
+    {
+        Id = message.Id,
+        Content = message.Content,
+        User = UserDto.FromEntity(message.User),
+        RoomId = message.RoomId,
+        CreatedAt = message.CreatedAt,
+        EditedAt = message.EditedAt,
+        AttachmentUrl = message.AttachmentUrl,
+        AttachmentFileName = message.AttachmentFileName,
+        Type = message.Type
+    };
 }

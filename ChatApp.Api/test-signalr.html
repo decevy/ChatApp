@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SignalR Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+</head>
+<body>
+    <h2>SignalR Chat Test</h2>
+    <div>
+        <input type="text" id="token" placeholder="JWT Token" style="width: 400px;"/>
+        <button onclick="connect()">Connect</button>
+        <button onclick="disconnect()">Disconnect</button>
+    </div>
+    <div>
+        <input type="number" id="roomId" placeholder="Room ID" value="1"/>
+        <button onclick="joinRoom()">Join Room</button>
+        <button onclick="leaveRoom()">Leave Room</button>
+    </div>
+    <div>
+        <input type="text" id="message" placeholder="Message" style="width: 300px;"/>
+        <button onclick="sendMessage()">Send</button>
+        <button onclick="startTyping()">Start Typing</button>
+        <button onclick="stopTyping()">Stop Typing</button>
+    </div>
+    <h3>Messages:</h3>
+    <div id="messages" style="border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px;"></div>
+
+    <script>
+        let connection;
+
+        function connect() {
+            const token = document.getElementById('token').value;
+            
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl("https://localhost:7051/chatHub", { 
+                    accessTokenFactory: () => token 
+                })
+                .withAutomaticReconnect()
+                .build();
+
+            // Event handlers
+            connection.on("ReceiveMessage", (data) => {
+                addMessage(`[${data.CreatedAt}] ${data.Username}: ${data.Content}`);
+            });
+
+            connection.on("UserJoinedRoom", (data) => {
+                addMessage(`User ${data.UserId} joined the room`);
+            });
+
+            connection.on("UserLeftRoom", (data) => {
+                addMessage(`User ${data.UserId} left the room`);
+            });
+
+            connection.on("UserStartedTyping", (data) => {
+                addMessage(`${data.Username} is typing...`);
+            });
+
+            connection.on("UserStoppedTyping", (data) => {
+                addMessage(`${data.Username} stopped typing`);
+            });
+
+            connection.on("UserStatusChanged", (data) => {
+                addMessage(`User ${data.UserId} is ${data.IsOnline ? 'online' : 'offline'}`);
+            });
+
+            connection.on("MessageEdited", (data) => {
+                addMessage(`Message ${data.Id} edited: ${data.Content}`);
+            });
+
+            connection.on("MessageDeleted", (data) => {
+                addMessage(`Message ${data.Id} deleted`);
+            });
+
+            connection.start()
+                .then(() => addMessage("Connected!"))
+                .catch(err => addMessage(`Error: ${err}`));
+        }
+
+        function disconnect() {
+            if (connection) {
+                connection.stop();
+                addMessage("Disconnected");
+            }
+        }
+
+        function joinRoom() {
+            const roomId = parseInt(document.getElementById('roomId').value);
+            connection.invoke("JoinRoom", roomId)
+                .catch(err => addMessage(`Error joining room: ${err}`));
+        }
+
+        function leaveRoom() {
+            const roomId = parseInt(document.getElementById('roomId').value);
+            connection.invoke("LeaveRoom", roomId)
+                .catch(err => addMessage(`Error leaving room: ${err}`));
+        }
+
+        function sendMessage() {
+            const roomId = parseInt(document.getElementById('roomId').value);
+            const message = document.getElementById('message').value;
+            
+            connection.invoke("SendMessage", roomId, message)
+                .then(() => document.getElementById('message').value = '')
+                .catch(err => addMessage(`Error: ${err}`));
+        }
+
+        function startTyping() {
+            const roomId = parseInt(document.getElementById('roomId').value);
+            connection.invoke("StartTyping", roomId)
+                .catch(err => addMessage(`Error: ${err}`));
+        }
+
+        function stopTyping() {
+            const roomId = parseInt(document.getElementById('roomId').value);
+            connection.invoke("StopTyping", roomId)
+                .catch(err => addMessage(`Error: ${err}`));
+        }
+
+        function addMessage(msg) {
+            const div = document.getElementById('messages');
+            div.innerHTML += `<div>${msg}</div>`;
+            div.scrollTop = div.scrollHeight;
+        }
+    </script>
+</body>
+</html>

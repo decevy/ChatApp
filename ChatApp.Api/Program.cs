@@ -6,6 +6,7 @@ using ChatApp.Infrastructure.Data;
 using ChatApp.Core.Interfaces;
 using ChatApp.Infrastructure.Repositories;
 using ChatApp.Services;
+using ChatApp.Api.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -140,7 +141,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 // We'll add the SignalR hub mapping here
-// app.MapHub<ChatHub>("/chatHub");
+app.MapHub<ChatHub>("/chatHub");
 
 // Database migration on startup
 using (var scope = app.Services.CreateScope())
