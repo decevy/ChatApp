@@ -31,49 +31,71 @@
         function connect() {
             const token = document.getElementById('token').value;
             
+            if (!token) {
+                addMessage("ERROR: Please enter a JWT token first!");
+                return;
+            }
+
+            addMessage("Attempting to connect...");
+            
             connection = new signalR.HubConnectionBuilder()
-                .withUrl("https://localhost:7051/chatHub", { 
-                    accessTokenFactory: () => token 
+                .withUrl("http://localhost:5056/chatHub", { 
+                    accessTokenFactory: () => token,
+                    skipNegotiation: false  // Explicitly enable negotiation
                 })
                 .withAutomaticReconnect()
+                .configureLogging(signalR.LogLevel.Debug)  // Enable debug logging
                 .build();
 
             // Event handlers
             connection.on("ReceiveMessage", (data) => {
-                addMessage(`[${data.CreatedAt}] ${data.Username}: ${data.Content}`);
+                addMessage(`[${data.createdAt}] ${data.user.username}: ${data.content}`);
             });
 
             connection.on("UserJoinedRoom", (data) => {
-                addMessage(`User ${data.UserId} joined the room`);
+                addMessage(`${data.username} joined room ${data.roomId}`);
             });
 
             connection.on("UserLeftRoom", (data) => {
-                addMessage(`User ${data.UserId} left the room`);
+                addMessage(`${data.username} left room ${data.roomId}`);
             });
 
             connection.on("UserStartedTyping", (data) => {
-                addMessage(`${data.Username} is typing...`);
+                addMessage(`${data.username} is typing...`);
             });
 
             connection.on("UserStoppedTyping", (data) => {
-                addMessage(`${data.Username} stopped typing`);
+                addMessage(`${data.username} stopped typing`);
             });
 
             connection.on("UserStatusChanged", (data) => {
-                addMessage(`User ${data.UserId} is ${data.IsOnline ? 'online' : 'offline'}`);
+                addMessage(`User ${data.userId} is ${data.isOnline ? 'online' : 'offline'}`);
             });
 
             connection.on("MessageEdited", (data) => {
-                addMessage(`Message ${data.Id} edited: ${data.Content}`);
+                addMessage(`Message ${data.id} edited: ${data.content}`);
             });
 
             connection.on("MessageDeleted", (data) => {
-                addMessage(`Message ${data.Id} deleted`);
+                addMessage(`Message ${data.id} deleted`);
             });
 
             connection.start()
-                .then(() => addMessage("Connected!"))
-                .catch(err => addMessage(`Error: ${err}`));
+                .then(() => {
+                    addMessage("✅ Connected successfully!");
+                    console.log("SignalR Connected");
+                })
+                .catch(err => {
+                    addMessage(`❌ Connection Error: ${err.message}`);
+                    console.error("SignalR Error:", err);
+                });
+
+            connection.onclose((error) => {
+                addMessage("Connection closed");
+                if (error) {
+                    console.error("Close error:", error);
+                }
+            });
         }
 
         function disconnect() {
@@ -86,41 +108,57 @@
         function joinRoom() {
             const roomId = parseInt(document.getElementById('roomId').value);
             connection.invoke("JoinRoom", roomId)
-                .catch(err => addMessage(`Error joining room: ${err}`));
+                .then(() => addMessage(`✅ Joined room ${roomId}`))
+                .catch(err => addMessage(`❌ Error joining room: ${err}`));
         }
 
         function leaveRoom() {
             const roomId = parseInt(document.getElementById('roomId').value);
             connection.invoke("LeaveRoom", roomId)
-                .catch(err => addMessage(`Error leaving room: ${err}`));
+                .then(() => addMessage(`Left room ${roomId}`))
+                .catch(err => addMessage(`❌ Error leaving room: ${err}`));
         }
 
         function sendMessage() {
             const roomId = parseInt(document.getElementById('roomId').value);
             const message = document.getElementById('message').value;
             
+            if (!message) {
+                addMessage("ERROR: Please enter a message");
+                return;
+            }
+            
             connection.invoke("SendMessage", roomId, message)
-                .then(() => document.getElementById('message').value = '')
-                .catch(err => addMessage(`Error: ${err}`));
+                .then(() => {
+                    document.getElementById('message').value = '';
+                    addMessage("✅ Message sent");
+                })
+                .catch(err => addMessage(`❌ Error: ${err}`));
         }
 
         function startTyping() {
             const roomId = parseInt(document.getElementById('roomId').value);
             connection.invoke("StartTyping", roomId)
-                .catch(err => addMessage(`Error: ${err}`));
+                .catch(err => addMessage(`❌ Error: ${err}`));
         }
 
         function stopTyping() {
             const roomId = parseInt(document.getElementById('roomId').value);
             connection.invoke("StopTyping", roomId)
-                .catch(err => addMessage(`Error: ${err}`));
+                .catch(err => addMessage(`❌ Error: ${err}`));
         }
 
         function addMessage(msg) {
             const div = document.getElementById('messages');
-            div.innerHTML += `<div>${msg}</div>`;
+            const timestamp = new Date().toLocaleTimeString();
+            div.innerHTML += `<div>[${timestamp}] ${msg}</div>`;
             div.scrollTop = div.scrollHeight;
         }
+
+        // Debug: Log when page loads
+        window.addEventListener('load', () => {
+            addMessage("Page loaded. Enter JWT token and click Connect.");
+        });
     </script>
 </body>
 </html>
