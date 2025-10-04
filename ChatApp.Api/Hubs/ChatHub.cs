@@ -14,11 +14,6 @@ public class ChatHub(
     IUserRepository userRepository,
     ILogger<ChatHub> logger) : Hub
 {
-    private readonly IMessageRepository _messageRepository = messageRepository;
-    private readonly IRoomRepository _roomRepository = roomRepository;
-    private readonly IUserRepository _userRepository = userRepository;
-    private readonly ILogger<ChatHub> _logger = logger;
-
     private static class EventNames
     {
         public const string
@@ -39,7 +34,7 @@ public class ChatHub(
         if (userId > 0)
         {
             await UpdateUserStatus(userId, true);
-            _logger.LogInformation("User {userId} connected: {connectionId}", userId, Context.ConnectionId);
+            logger.LogInformation("User {userId} connected: {connectionId}", userId, Context.ConnectionId);
         }
 
         await base.OnConnectedAsync();
@@ -51,7 +46,7 @@ public class ChatHub(
         if (userId > 0)
         {
             await UpdateUserStatus(userId, false);
-            _logger.LogInformation("User {userId} disconnected: {connectionId}", userId, Context.ConnectionId);
+            logger.LogInformation("User {userId} disconnected: {connectionId}", userId, Context.ConnectionId);
         }
 
         await base.OnDisconnectedAsync(exception);
@@ -63,7 +58,7 @@ public class ChatHub(
         var userId = GetUserId();
 
         // Verify user has access to this room
-        var isMember = await _roomRepository.IsUserMemberAsync(roomId, userId);
+        var isMember = await roomRepository.IsUserMemberAsync(roomId, userId);
         if (!isMember)
             throw new HubException("You are not a member of this room");
 
@@ -76,7 +71,7 @@ public class ChatHub(
             new RoomEventDto { UserId = userId, RoomId = roomId, Timestamp = DateTime.UtcNow }
         );
 
-        _logger.LogInformation("User {userId} joined room {roomId}", userId, roomId);
+        logger.LogInformation("User {userId} joined room {roomId}", userId, roomId);
     }
 
     public async Task LeaveRoom(int roomId)
@@ -92,7 +87,7 @@ public class ChatHub(
             new RoomEventDto { UserId = userId, RoomId = roomId, Timestamp = DateTime.UtcNow }
         );
 
-        _logger.LogInformation("User {userId} left room {roomId}", userId, roomId);
+        logger.LogInformation("User {userId} left room {roomId}", userId, roomId);
     }
 
     // Message Operations
@@ -101,11 +96,11 @@ public class ChatHub(
         var userId = GetUserId();
 
         // Verify user has access to this room
-        var isMember = await _roomRepository.IsUserMemberAsync(roomId, userId);
+        var isMember = await roomRepository.IsUserMemberAsync(roomId, userId);
         if (!isMember)
             throw new HubException("You are not a member of this room");
 
-        var user = await _userRepository.GetByIdAsync(userId)
+        var user = await userRepository.GetByIdAsync(userId)
             ?? throw new HubException("User not found");
 
         // Create and save message
@@ -118,7 +113,7 @@ public class ChatHub(
             CreatedAt = DateTime.UtcNow,
             User = user
         };
-        await _messageRepository.CreateAsync(message);
+        await messageRepository.CreateAsync(message);
 
         // Send to all clients in the room (including sender)
         await Clients.Group(GetGroupName(roomId)).SendAsync(
@@ -126,13 +121,13 @@ public class ChatHub(
             MessageDto.FromEntity(message)
         );
 
-        _logger.LogInformation("User {userId} sent message to room {roomId}", userId, roomId);
+        logger.LogInformation("User {userId} sent message to room {roomId}", userId, roomId);
     }
 
     public async Task EditMessage(int messageId, string newContent)
     {
         var userId = GetUserId();
-        var message = await _messageRepository.GetByIdAsync(messageId)
+        var message = await messageRepository.GetByIdAsync(messageId)
             ?? throw new HubException("Message not found");
 
         if (message.UserId != userId)
@@ -141,7 +136,7 @@ public class ChatHub(
         message.Content = newContent;
         message.EditedAt = DateTime.UtcNow;
 
-        await _messageRepository.UpdateAsync(message);
+        await messageRepository.UpdateAsync(message);
 
         // Notify all clients in the room
         await Clients.Group(GetGroupName(message.RoomId)).SendAsync(
@@ -158,13 +153,13 @@ public class ChatHub(
     public async Task DeleteMessage(int messageId)
     {
         var userId = GetUserId();
-        var message = await _messageRepository.GetByIdAsync(messageId)
+        var message = await messageRepository.GetByIdAsync(messageId)
             ?? throw new HubException("Message not found");
 
         if (message.UserId != userId)
             throw new HubException("You can only delete your own messages");
 
-        await _messageRepository.DeleteAsync(messageId);
+        await messageRepository.DeleteAsync(messageId);
 
         // Notify all clients in the room
         await Clients.Group(GetGroupName(message.RoomId)).SendAsync(
@@ -177,7 +172,7 @@ public class ChatHub(
     public async Task StartTyping(int roomId)
     {
         var userId = GetUserId();
-        var user = await _userRepository.GetByIdAsync(userId);
+        var user = await userRepository.GetByIdAsync(userId);
 
         await Clients.OthersInGroup(GetGroupName(roomId)).SendAsync(
             EventNames.UserStartedTyping,
@@ -206,12 +201,12 @@ public class ChatHub(
 
     private async Task UpdateUserStatus(int userId, bool isOnline)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
+        var user = await userRepository.GetByIdAsync(userId);
         if (user != null)
         {
             user.IsOnline = isOnline;
             user.LastSeen = DateTime.UtcNow;
-            await _userRepository.UpdateAsync(user);
+            await userRepository.UpdateAsync(user);
 
             // Broadcast status change to all connected clients
             await Clients.All.SendAsync(

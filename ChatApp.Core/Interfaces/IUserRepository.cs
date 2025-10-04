@@ -9,7 +9,7 @@ public interface IUserRepository
     Task<User?> GetByUsernameAsync(string username);
     Task<User?> GetByRefreshTokenAsync(string refreshToken);
     Task<IEnumerable<User>> GetAllAsync();
-   Task<User> CreateAsync(User user);
+    Task<User> CreateAsync(User user);
     Task UpdateAsync(User user);
     Task DeleteAsync(int id);
     Task<bool> ExistsAsync(int id);
