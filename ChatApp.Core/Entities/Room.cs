@@ -4,8 +4,6 @@ namespace ChatApp.Core.Entities;
 
 public class Room
 {
-    public static Room None => new() { Id = -1 };
-
     public int Id { get; set; }
 
     [Required]
@@ -20,7 +18,7 @@ public class Room
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation properties
-    public User? Creator { get; set; }
+    public User Creator { get; set; } = null!;
     public ICollection<Message> Messages { get; set; } = [];
     public ICollection<RoomMember> Members { get; set; } = [];
 }

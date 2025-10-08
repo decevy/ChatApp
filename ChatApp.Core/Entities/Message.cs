@@ -4,8 +4,6 @@ namespace ChatApp.Core.Entities;
 
 public class Message
 {
-    public static Message None => new() { Id = -1 };
-
     public int Id { get; set; }
 
     [Required]
@@ -21,7 +19,7 @@ public class Message
     public MessageType Type { get; set; } = MessageType.Text;
 
     // Navigation properties
-    public User User { get; set; } = User.None;
-    public Room Room { get; set; } = Room.None;
+    public User User { get; set; } = null!;
+    public Room Room { get; set; } = null!;
     public ICollection<MessageReaction> Reactions { get; set; } = [];
 }

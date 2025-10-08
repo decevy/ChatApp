@@ -4,8 +4,6 @@ namespace ChatApp.Core.Entities;
 
 public class User
 {
-    public static User None => new() { Id = -1 };
-
     public int Id { get; set; }
 
     [Required]
