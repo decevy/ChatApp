@@ -21,7 +21,7 @@ public class RoomDto
         Description = room.Description,
         IsPrivate = room.IsPrivate,
         CreatedAt = room.CreatedAt,
-        Creator = UserDto.FromEntity(room.Creator),
+        Creator = ((User?)room.Creator)?.Transform(UserDto.FromEntity)!,
         MemberCount = room.Members.Count,
         LastMessage = room.Messages
             .OrderByDescending(m => m.CreatedAt).FirstOrDefault()?
