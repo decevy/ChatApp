@@ -1,4 +1,5 @@
 using ChatApp.Core.Entities;
+using ChatApp.Core.Extensions;
 
 namespace ChatApp.Core.Dtos;
 
@@ -15,7 +16,7 @@ public class MessageDto
     public MessageType Type { get; set; }
     public List<MessageReactionDto> Reactions { get; set; } = [];
 
-    public static MessageDto FromEntity(Message message) => new()
+    public static MessageDto FromEntity(Message message) => new MessageDto
     {
         Id = message.Id,
         Content = message.Content,

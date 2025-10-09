@@ -1,3 +1,6 @@
+using ChatApp.Core.Entities;
+using ChatApp.Core.Extensions;
+
 namespace ChatApp.Core.Dtos;
 
 public class RoomDto
@@ -10,4 +13,18 @@ public class RoomDto
     public DateTime CreatedAt { get; set; }
     public int MemberCount { get; set; }
     public MessageDto? LastMessage { get; set; }
+
+    public static RoomDto FromEntity(Room room) => new RoomDto
+    {
+        Id = room.Id,
+        Name = room.Name,
+        Description = room.Description,
+        IsPrivate = room.IsPrivate,
+        CreatedAt = room.CreatedAt,
+        Creator = UserDto.FromEntity(room.Creator),
+        MemberCount = room.Members.Count,
+        LastMessage = room.Messages
+            .OrderByDescending(m => m.CreatedAt).FirstOrDefault()?
+            .Transform(MessageDto.FromEntity)
+    };
 }

@@ -32,6 +32,17 @@ public class UserRepository(ChatDbContext context) : IUserRepository
         return await context.Users.ToListAsync();
     }
 
+    public async Task<IEnumerable<User>> SearchUsersAsync(string query)
+    {
+        var searchTerm = query.ToLower();
+        return await context.Users
+            .Where(u => 
+                u.Username.ToLower().Contains(searchTerm) || 
+                u.Email.ToLower().Contains(searchTerm))
+            .Take(20)
+            .ToListAsync();
+    }
+
     public async Task<User> CreateAsync(User user)
     {
         context.Users.Add(user);

@@ -7,7 +7,7 @@ using ChatApp.Core.Dtos.Responses;
 namespace ChatApp.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/auth")]
 public class AuthController(IAuthService authService, ILogger<AuthController> logger) : ControllerBase
 {
     [HttpPost("register")]
