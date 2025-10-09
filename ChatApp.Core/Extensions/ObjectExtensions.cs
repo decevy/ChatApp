@@ -11,10 +11,5 @@ public static class ObjectExtensions
     {
         return await transformer(input);
     }
-
-    public static TResult If<TInput, TResult>(this TInput input, bool condition, Func<TInput, TResult> transformer)
-    {
-        return condition ? transformer(input) : default!;
-    }
 }
 

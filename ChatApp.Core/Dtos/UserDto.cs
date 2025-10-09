@@ -4,8 +4,6 @@ namespace ChatApp.Core.Dtos;
 
 public class UserDto
 {
-    public static UserDto None => new() { Id = -1 };
-
     public int Id { get; set; }
     public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
