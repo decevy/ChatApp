@@ -6,7 +6,6 @@ using ChatApp.Core.Dtos.Responses;
 using ChatApp.Core.Entities;
 using ChatApp.Core.Interfaces;
 using System.Security.Claims;
-using ChatApp.Core.Extensions;
 
 namespace ChatApp.Api.Controllers;
 
@@ -18,6 +17,7 @@ namespace ChatApp.Api.Controllers;
 [Route("api/rooms")]
 public class RoomsController(
     IRoomRepository roomRepository,
+    IMessageRepository messageRepository,
     IUserRepository userRepository,
     ILogger<RoomsController> logger) : ControllerBase
 {
@@ -25,20 +25,23 @@ public class RoomsController(
     /// Get all rooms the current user is a member of
     /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(List<RoomDto>), 200)]
+    [ProducesResponseType(typeof(List<RoomSummaryDto>), 200)]
     public async Task<IActionResult> GetUserRooms()
     {
         var userId = GetCurrentUserId();
-        var rooms = await roomRepository.GetUserRoomsAsync(userId,
-            includeCreator: true,
-            includeMembers: true);
+        var rooms = await roomRepository.Query()
+            .WithCreator()
+            .WithMembers()
+            .WhereUserIsMember(userId)
+            .ToListAsync();
         
-        var roomDtos = new List<RoomDto>();
+        var roomDtos = new List<RoomSummaryDto>();
         foreach (var room in rooms)
         {
-            var roomDto = RoomDto.FromEntity(room);
-            roomDto.LastMessage = (await roomRepository.GetLastMessageInRoomAsync(room.Id))?
-                .Transform(MessageDto.FromEntity);
+            var lastMessage = await messageRepository.GetLastMessageInRoomAsync(room.Id);
+            if (lastMessage != null)
+                room.Messages.Add(lastMessage);
+            var roomDto = RoomSummaryDto.FromEntity(room);
             roomDtos.Add(roomDto);
         }
         
@@ -48,41 +51,26 @@ public class RoomsController(
     /// <summary>
     /// Get detailed information about a specific room
     /// </summary>
-    [HttpGet("{id}")]
-    [ProducesResponseType(typeof(RoomDetailsDto), 200)]
+    [HttpGet("{roomId}")]
+    [ProducesResponseType(typeof(RoomDto), 200)]
     [ProducesResponseType(403)]
     [ProducesResponseType(404)]
-    public async Task<IActionResult> GetRoom(int id)
+    public async Task<IActionResult> GetRoom(int roomId)
     {
         var userId = GetCurrentUserId();
         
         // Check if user is a member
-        if (!await roomRepository.IsUserMemberAsync(id, userId))
+        if (!await roomRepository.IsUserMemberAsync(roomId, userId))
             return Forbid();
         
-        var room = await roomRepository.GetByIdWithMembersAsync(id);
+        var room = await roomRepository.Query()
+            .WithCreator()
+            .WithMembers()
+            .FindByIdAsync(roomId);
         if (room == null)
             return NotFound(new ErrorResponse("Room not found"));
 
-        var response = new RoomDetailsDto
-        {
-            Id = room.Id,
-            Name = room.Name,
-            Description = room.Description,
-            IsPrivate = room.IsPrivate,
-            CreatedAt = room.CreatedAt,
-            CreatedById = room.CreatedBy,
-            CreatedByUsername = room.Creator.Username,
-            Members = room.Members.Select(m => new RoomMemberDto
-            {
-                UserId = m.UserId,
-                Username = m.User.Username,
-                Email = m.User.Email,
-                Role = m.Role.ToString(),
-                JoinedAt = m.JoinedAt
-            }).ToList()
-        };
-
+        var response = RoomDto.FromEntity(room);
         return Ok(response);
     }
 
@@ -95,11 +83,11 @@ public class RoomsController(
     public async Task<IActionResult> CreateRoom([FromBody] CreateRoomRequest request)
     {
         var userId = GetCurrentUserId();
-        var user = await userRepository.GetByIdAsync(userId);
-        
+        var user = await userRepository.FindByIdAsync(userId);
         if (user == null)
             return BadRequest(new ErrorResponse("User not found"));
 
+        // Create room
         var room = new Room
         {
             Name = request.Name,
@@ -109,49 +97,39 @@ public class RoomsController(
             CreatedAt = DateTime.UtcNow,
             Creator = user
         };
-
-        await roomRepository.CreateAsync(room);
+        room = await roomRepository.CreateAsync(room);
 
         // Add creator as admin member
-        await roomRepository.AddRoomMemberAsync(new RoomMember
+        var roomMember = new RoomMember
         {
             UserId = userId,
             RoomId = room.Id,
             Role = RoomRole.Admin,
             JoinedAt = DateTime.UtcNow
-        });
-
-        var roomDto = new RoomDto
-        {
-            Id = room.Id,
-            Name = room.Name,
-            Description = room.Description,
-            IsPrivate = room.IsPrivate,
-            CreatedAt = room.CreatedAt,
-            Creator = UserDto.FromEntity(user),
-            MemberCount = 1,
-            LastMessage = null
         };
+        await roomRepository.AddRoomMemberAsync(roomMember);
+        room.Members.Add(roomMember);
 
-        return CreatedAtAction(nameof(GetRoom), new { id = room.Id }, roomDto);
+        var roomDto = RoomDto.FromEntity(room);
+        return CreatedAtAction(nameof(GetRoom), new { roomId = room.Id }, roomDto);
     }
 
     /// <summary>
     /// Update room details (name, description)
     /// </summary>
-    [HttpPut("{id}")]
+    [HttpPut("{roomId}")]
     [ProducesResponseType(typeof(RoomDto), 200)]
     [ProducesResponseType(403)]
     [ProducesResponseType(404)]
-    public async Task<IActionResult> UpdateRoom(int id, [FromBody] UpdateRoomRequest request)
+    public async Task<IActionResult> UpdateRoom(int roomId, [FromBody] UpdateRoomRequest request)
     {
         var userId = GetCurrentUserId();
         
         // Check if user is admin
-        if (!await roomRepository.IsUserRoomAdminAsync(id, userId))
+        if (!await roomRepository.IsUserRoomAdminAsync(roomId, userId))
             return Forbid();
 
-        var room = await roomRepository.GetByIdAsync(id);
+        var room = await roomRepository.FindByIdAsync(roomId);
         if (room == null)
             return NotFound(new ErrorResponse("Room not found"));
 
@@ -160,16 +138,11 @@ public class RoomsController(
         
         await roomRepository.UpdateAsync(room);
 
-        var roomDto = new RoomDto
-        {
-            Id = room.Id,
-            Name = room.Name,
-            Description = room.Description,
-            IsPrivate = room.IsPrivate,
-            CreatedAt = room.CreatedAt,
-            Creator = UserDto.FromEntity(room.Creator),
-            MemberCount = room.Members.Count
-        };
+        room = await roomRepository.Query()
+            .WithCreator()
+            .WithMembers()
+            .GetByIdAsync(room.Id);
+        var roomDto = RoomDto.FromEntity(room);
 
         return Ok(roomDto);
     }
@@ -177,23 +150,23 @@ public class RoomsController(
     /// <summary>
     /// Delete a room (admin only)
     /// </summary>
-    [HttpDelete("{id}")]
+    [HttpDelete("{roomId}")]
     [ProducesResponseType(204)]
     [ProducesResponseType(403)]
     [ProducesResponseType(404)]
-    public async Task<IActionResult> DeleteRoom(int id)
+    public async Task<IActionResult> DeleteRoom(int roomId)
     {
         var userId = GetCurrentUserId();
         
         // Check if user is admin
-        if (!await roomRepository.IsUserRoomAdminAsync(id, userId))
+        if (!await roomRepository.IsUserRoomAdminAsync(roomId, userId))
             return Forbid();
 
-        var room = await roomRepository.GetByIdAsync(id);
+        var room = await roomRepository.FindByIdAsync(roomId);
         if (room == null)
             return NotFound(new ErrorResponse("Room not found"));
 
-        await roomRepository.DeleteAsync(id);
+        await roomRepository.DeleteAsync(roomId);
         
         return NoContent();
     }
@@ -201,81 +174,82 @@ public class RoomsController(
     /// <summary>
     /// Add a member to the room
     /// </summary>
-    [HttpPost("{id}/members")]
+    [HttpPost("{roomId}/members")]
     [ProducesResponseType(typeof(MessageResponse), 201)]
     [ProducesResponseType(400)]
     [ProducesResponseType(403)]
     [ProducesResponseType(404)]
-    public async Task<IActionResult> AddMember(int id, [FromBody] AddRoomMemberRequest request)
+    public async Task<IActionResult> AddMember(int roomId, [FromBody] AddRoomMemberRequest request)
     {
         var userId = GetCurrentUserId();
         
         // Check if user is admin
-        if (!await roomRepository.IsUserRoomAdminAsync(id, userId))
+        if (!await roomRepository.IsUserRoomAdminAsync(roomId, userId))
             return Forbid();
 
-        var room = await roomRepository.GetByIdAsync(id);
+        var room = await roomRepository.FindByIdAsync(roomId);
         if (room == null)
             return NotFound(new ErrorResponse("Room not found"));
 
         // Check if user to add exists
-        var userToAdd = await userRepository.GetByIdAsync(request.UserId);
+        var userToAdd = await userRepository.FindByIdAsync(request.UserId);
         if (userToAdd == null)
             return BadRequest(new ErrorResponse("User not found"));
 
         // Check if already a member
-        if (await roomRepository.IsUserMemberAsync(id, request.UserId))
+        if (await roomRepository.IsUserMemberAsync(roomId, request.UserId))
             return BadRequest(new ErrorResponse("User is already a member"));
 
         await roomRepository.AddRoomMemberAsync(new RoomMember
         {
             UserId = request.UserId,
-            RoomId = id,
+            RoomId = roomId,
             Role = request.IsAdmin ? RoomRole.Admin : RoomRole.Member,
             JoinedAt = DateTime.UtcNow
         });
 
         return CreatedAtAction(
             nameof(GetRoom), 
-            new { id }, 
+            new { roomId }, 
             new MessageResponse($"User {userToAdd.Username} added to room"));
     }
 
     /// <summary>
     /// Remove a member from the room
     /// </summary>
-    [HttpDelete("{id}/members/{userId}")]
+    [HttpDelete("{roomId}/members/{userId}")]
     [ProducesResponseType(204)]
     [ProducesResponseType(400)]
     [ProducesResponseType(403)]
     [ProducesResponseType(404)]
-    public async Task<IActionResult> RemoveMember(int id, int userId)
+    public async Task<IActionResult> RemoveMember(int roomId, int userId)
     {
         var currentUserId = GetCurrentUserId();
         
         // Users can remove themselves, or admins can remove others
-        var isAdmin = await roomRepository.IsUserRoomAdminAsync(id, currentUserId);
-        if (userId != currentUserId && !isAdmin)
+        var isRemovingOther = userId != currentUserId;
+        var isAdmin = await roomRepository.IsUserRoomAdminAsync(roomId, currentUserId);
+        if (isRemovingOther && !isAdmin)
             return Forbid();
 
-        var room = await roomRepository.GetByIdAsync(id);
+        var room = await roomRepository.FindByIdAsync(roomId);
         if (room == null)
             return NotFound(new ErrorResponse("Room not found"));
 
-        var member = await roomRepository.GetRoomMemberAsync(id, userId);
+        var member = await roomRepository.GetRoomMemberAsync(roomId, userId);
         if (member == null)
             return NotFound(new ErrorResponse("User is not a member of this room"));
 
         // Prevent removing the last admin
         if (member.Role == RoomRole.Admin)
         {
-            var roomWithMembers = await roomRepository.GetByIdWithMembersAsync(id);
+            var roomWithMembers = await roomRepository.Query().WithMembers().FindByIdAsync(roomId);
             var adminCount = roomWithMembers?.Members.Count(m => m.Role == RoomRole.Admin) ?? 0;
             if (adminCount == 1)
                 return BadRequest(new ErrorResponse("Cannot remove the last admin"));
         }
 
-        await roomRepository.RemoveRoomMemberAsync(id, userId);
+        await roomRepository.RemoveRoomMemberAsync(roomId, userId);
         
         return NoContent();
     }
@@ -283,25 +257,28 @@ public class RoomsController(
     /// <summary>
     /// Get paginated message history for a room
     /// </summary>
-    [HttpGet("{id}/messages")]
+    [HttpGet("{roomId}/messages")]
     [ProducesResponseType(typeof(PaginatedResponse<MessageDto>), 200)]
     [ProducesResponseType(403)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetRoomMessages(
-        int id, 
+        int roomId, 
         [FromQuery] int page = 1, 
         [FromQuery] int pageSize = 50)
     {
         var userId = GetCurrentUserId();
         
         // Check if user is a member
-        if (!await roomRepository.IsUserMemberAsync(id, userId))
+        if (!await roomRepository.IsUserMemberAsync(roomId, userId))
             return Forbid();
 
         if (page < 1) page = 1;
-        if (pageSize < 1 || pageSize > 100) pageSize = 50;
+        if (pageSize is < 1 or > 100) pageSize = 50;
 
-        var (messages, totalCount) = await roomRepository.GetRoomMessagesPagedAsync(id, page, pageSize);
+        var (messages, totalCount) = await messageRepository.Query()
+            .WithUser()
+            .WhereRoomId(roomId)
+            .ToPagedListAsync(page, pageSize);
 
         var response = new PaginatedResponse<MessageDto>
         {

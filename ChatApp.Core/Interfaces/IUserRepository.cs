@@ -1,14 +1,18 @@
 using ChatApp.Core.Entities;
+using ChatApp.Core.QueryBuilders;
 
 namespace ChatApp.Core.Interfaces;
 
 public interface IUserRepository
 {
+    UserQueryBuilder Query();
+    
     Task<User> CreateAsync(User user);
-    Task<User?> GetByIdAsync(int id);
-    Task<User?> GetByEmailAsync(string email);
-    Task<User?> GetByUsernameAsync(string username);
-    Task<User?> GetByRefreshTokenAsync(string refreshToken);
+    Task<User> GetByIdAsync(int id);
+    Task<User?> FindByIdAsync(int id);
+    Task<User?> FindByEmailAsync(string email);
+    Task<User?> FindByUsernameAsync(string username);
+    Task<User?> FindByRefreshTokenAsync(string refreshToken);
     Task<IEnumerable<User>> GetAllAsync();
     Task<IEnumerable<User>> SearchUsersAsync(string query);
     Task UpdateAsync(User user);

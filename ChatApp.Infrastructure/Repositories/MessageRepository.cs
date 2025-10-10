@@ -1,32 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using ChatApp.Core.Entities;
 using ChatApp.Core.Interfaces;
+using ChatApp.Core.QueryBuilders;
 using ChatApp.Infrastructure.Data;
 
 namespace ChatApp.Infrastructure.Repositories;
 
 public class MessageRepository(ChatDbContext context) : IMessageRepository
 {
-    public async Task<Message?> GetByIdAsync(int id)
+    public MessageQueryBuilder Query()
     {
-        return await context.Messages
-            .Include(m => m.User)
-            .Include(m => m.Reactions)
-                .ThenInclude(r => r.User)
-            .FirstOrDefaultAsync(m => m.Id == id);
-    }
-
-    public async Task<IEnumerable<Message>> GetRoomMessagesAsync(int roomId, int page = 1, int pageSize = 50)
-    {
-        return await context.Messages
-            .Include(m => m.User)
-            .Include(m => m.Reactions)
-                .ThenInclude(r => r.User)
-            .Where(m => m.RoomId == roomId)
-            .OrderByDescending(m => m.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+        return new MessageQueryBuilder(context.Messages.AsQueryable());
     }
 
     public async Task<Message> CreateAsync(Message message)
@@ -35,7 +19,9 @@ public class MessageRepository(ChatDbContext context) : IMessageRepository
         await context.SaveChangesAsync();
         
         // Return the message with includes
-        return await GetByIdAsync(message.Id) ?? message;
+        return await Query()
+            .WithFullDetails()
+            .GetByIdAsync(message.Id) ?? message;
     }
 
     public async Task UpdateAsync(Message message)
@@ -56,10 +42,10 @@ public class MessageRepository(ChatDbContext context) : IMessageRepository
 
     public async Task<Message?> GetLastMessageInRoomAsync(int roomId)
     {
-        return await context.Messages
-            .Include(m => m.User)
-            .Where(m => m.RoomId == roomId)
-            .OrderByDescending(m => m.CreatedAt)
+        return await Query()
+            .WithUser()
+            .WhereRoomId(roomId)
+            .OrderByNewest()
             .FirstOrDefaultAsync();
     }
 }

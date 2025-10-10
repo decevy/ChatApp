@@ -1,44 +1,59 @@
 using Microsoft.EntityFrameworkCore;
 using ChatApp.Core.Entities;
 using ChatApp.Core.Interfaces;
+using ChatApp.Core.QueryBuilders;
 using ChatApp.Infrastructure.Data;
 
 namespace ChatApp.Infrastructure.Repositories;
 
 public class UserRepository(ChatDbContext context) : IUserRepository
 {
-    public async Task<User?> GetByIdAsync(int id)
+    public UserQueryBuilder Query()
     {
-        return await context.Users.FindAsync(id);
+        return new UserQueryBuilder(context.Users.AsQueryable());
     }
 
-    public async Task<User?> GetByEmailAsync(string email)
+    public async Task<User> GetByIdAsync(int id)
     {
-        return await context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        return await Query().GetByIdAsync(id);
     }
 
-    public async Task<User?> GetByUsernameAsync(string username)
+    public async Task<User?> FindByIdAsync(int id)
     {
-        return await context.Users.FirstOrDefaultAsync(u => u.Username == username);
+        return await Query().FindByIdAsync(id);
     }
 
-    public async Task<User?> GetByRefreshTokenAsync(string refreshToken)
+    public async Task<User?> FindByEmailAsync(string email)
     {
-        return await context.Users.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
+        return await Query()
+            .WhereEmail(email)
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<User?> FindByUsernameAsync(string username)
+    {
+        return await Query()
+            .WhereUsername(username)
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<User?> FindByRefreshTokenAsync(string refreshToken)
+    {
+        return await Query()
+            .WhereRefreshToken(refreshToken)
+            .FirstOrDefaultAsync();
     }
 
     public async Task<IEnumerable<User>> GetAllAsync()
     {
-        return await context.Users.ToListAsync();
+        return await Query().ToListAsync();
     }
 
     public async Task<IEnumerable<User>> SearchUsersAsync(string query)
     {
-        var searchTerm = query.ToLower();
-        return await context.Users
-            .Where(u => 
-                u.Username.ToLower().Contains(searchTerm) || 
-                u.Email.ToLower().Contains(searchTerm))
+        return await Query()
+            .WhereSearchTerm(query)
+            .OrderByUsername()
             .Take(20)
             .ToListAsync();
     }
@@ -68,6 +83,8 @@ public class UserRepository(ChatDbContext context) : IUserRepository
 
     public async Task<bool> ExistsAsync(int id)
     {
-        return await context.Users.AnyAsync(u => u.Id == id);
+        return await Query()
+            .WhereId(id)
+            .AnyAsync();
     }
 }

@@ -17,12 +17,12 @@ public class AuthService(IUserRepository userRepository, IConfiguration config) 
     public async Task<LoginResponse> RegisterAsync(RegisterRequest request)
     {
         // Check if email already exists
-        var existingUser = await userRepository.GetByEmailAsync(request.Email);
+        var existingUser = await userRepository.FindByEmailAsync(request.Email);
         if (existingUser != null)
             throw new InvalidOperationException("Email already registered");
 
         // Check if username already exists
-        var existingUsername = await userRepository.GetByUsernameAsync(request.Username);
+        var existingUsername = await userRepository.FindByUsernameAsync(request.Username);
         if (existingUsername != null)
             throw new InvalidOperationException("Username already taken");
 
@@ -60,7 +60,7 @@ public class AuthService(IUserRepository userRepository, IConfiguration config) 
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
     {
         // Find user
-        var user = await userRepository.GetByEmailAsync(request.Email)
+        var user = await userRepository.FindByEmailAsync(request.Email)
             ?? throw new UnauthorizedAccessException("Invalid credentials");
 
         // Verify password
@@ -91,7 +91,7 @@ public class AuthService(IUserRepository userRepository, IConfiguration config) 
         var hashedToken = HashRefreshToken(refreshToken);
 
         // Find user with this refresh token
-        var user = await userRepository.GetByRefreshTokenAsync(hashedToken);
+        var user = await userRepository.FindByRefreshTokenAsync(hashedToken);
 
         if (user?.RefreshTokenExpiry == null || user.RefreshTokenExpiry < DateTime.UtcNow)
             throw new UnauthorizedAccessException("Invalid or expired refresh token");

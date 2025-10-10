@@ -1,60 +1,37 @@
 using Microsoft.EntityFrameworkCore;
 using ChatApp.Core.Entities;
-using ChatApp.Core.Extensions;
 using ChatApp.Core.Interfaces;
+using ChatApp.Core.QueryBuilders;
 using ChatApp.Infrastructure.Data;
 
 namespace ChatApp.Infrastructure.Repositories;
 
 public class RoomRepository(ChatDbContext context) : IRoomRepository
 {
-    #region Room CRUD operations
+    #region Rooms
+    public RoomQueryBuilder Query()
+    {
+        return new RoomQueryBuilder(context.Rooms.AsQueryable());
+    }
+
+    public async Task<Room> GetByIdAsync(int id)
+    {
+        return await Query().GetByIdAsync(id);
+    }
+
+    public async Task<Room?> FindByIdAsync(int id)
+    {
+        return await Query().FindByIdAsync(id);
+    }
+
     public async Task<Room> CreateAsync(Room room)
     {
         context.Rooms.Add(room);
         await context.SaveChangesAsync();
-        return room;
-    }
-
-    public async Task<Room?> GetByIdAsync(int id)
-    {
-        return await context.Rooms
-            .Include(r => r.Creator)
-            .FirstOrDefaultAsync(r => r.Id == id);
-    }
-
-    public async Task<Room?> GetByIdWithMembersAsync(int id)
-    {
-        return await context.Rooms
-            .Include(r => r.Creator)
-            .Include(r => r.Members)
-                .ThenInclude(m => m.User)
-            .Include(r => r.Messages.OrderByDescending(m => m.CreatedAt).Take(50))
-                .ThenInclude(m => m.User)
-            .FirstOrDefaultAsync(r => r.Id == id);
-    }
-
-    public async Task<IEnumerable<Room>> GetUserRoomsAsync(int userId,
-        bool includeCreator = false,
-        bool includeMembers = false, bool includeMemberUsers = false,
-        bool includeMessages = false, bool includeMessageUsers = false)
-    {
-        return await context.Rooms
-            .IncludeIf(includeCreator, r => r.Creator)
-            .IncludeIf(includeMembers || includeMemberUsers, r => r.Members)
-                .ThenIncludeIf(includeMemberUsers, m => m.User)
-            .IncludeIf(includeMessages || includeMessageUsers, r => r.Messages)
-                .ThenIncludeIf(includeMessageUsers, m => m.User)
-            .Where(r => r.Members.Any(m => m.UserId == userId))
-            .ToListAsync();
-    }
-
-    public async Task<IEnumerable<Room>> GetPublicRoomsAsync()
-    {
-        return await context.Rooms
-            .Include(r => r.Creator)
-            .Where(r => !r.IsPrivate)
-            .ToListAsync();
+        
+        return await Query()
+            .WithFullDetails()
+            .GetByIdAsync(room.Id) ?? room;
     }
 
     public async Task UpdateAsync(Room room)
@@ -74,12 +51,18 @@ public class RoomRepository(ChatDbContext context) : IRoomRepository
     }
     #endregion
 
-    #region Room Member operations
+    #region Room Members
+    public RoomMemberQueryBuilder QueryRoomMembers()
+    {
+        return new RoomMemberQueryBuilder(context.RoomMembers.AsQueryable());
+    }
+
     public async Task<RoomMember?> GetRoomMemberAsync(int roomId, int userId)
     {
-        return await context.RoomMembers
-            .Include(rm => rm.User)
-            .FirstOrDefaultAsync(rm => rm.RoomId == roomId && rm.UserId == userId);
+        return await QueryRoomMembers()
+            .WhereRoomAndUser(roomId, userId)
+            .WithUser()
+            .FirstOrDefaultAsync();
     }
 
     public async Task AddRoomMemberAsync(RoomMember member)
@@ -100,47 +83,17 @@ public class RoomRepository(ChatDbContext context) : IRoomRepository
 
     public async Task<bool> IsUserMemberAsync(int roomId, int userId)
     {
-        return await context.RoomMembers
-            .AnyAsync(rm => rm.RoomId == roomId && rm.UserId == userId);
+        return await QueryRoomMembers()
+            .WhereRoomAndUser(roomId, userId)
+            .AnyAsync();
     }
 
     public async Task<bool> IsUserRoomAdminAsync(int roomId, int userId)
     {
-        return await context.RoomMembers
-            .AnyAsync(
-                rm => rm.RoomId == roomId && rm.UserId == userId 
-                && rm.Role == RoomRole.Admin);
-    }
-    #endregion
-
-    #region Message operations
-
-    public async Task<Message?> GetLastMessageInRoomAsync(int roomId)
-    {
-        return await context.Messages
-            .Include(m => m.User)
-            .Where(m => m.RoomId == roomId)
-            .OrderByDescending(m => m.CreatedAt)
-            .FirstOrDefaultAsync();
-    }
-
-    public async Task<(IEnumerable<Message> messages, int totalCount)> GetRoomMessagesPagedAsync(int roomId, int page, int pageSize)
-    {
-        var query = context.Messages
-            .Include(m => m.User)
-            .Include(m => m.Reactions)
-                .ThenInclude(r => r.User)
-            .Where(m => m.RoomId == roomId);
-
-        var totalCount = await query.CountAsync();
-        
-        var messages = await query
-            .OrderByDescending(m => m.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
-
-        return (messages, totalCount);
+        return await QueryRoomMembers()
+            .WhereRoomAndUser(roomId, userId)
+            .WhereAdmin()
+            .AnyAsync();
     }
     #endregion
 }

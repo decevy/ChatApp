@@ -1,8 +1,9 @@
 using ChatApp.Core.Entities;
+using ChatApp.Core.Extensions;
 
 namespace ChatApp.Core.Dtos;
 
-public class RoomDto
+public class RoomSummaryDto
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
@@ -10,9 +11,10 @@ public class RoomDto
     public bool IsPrivate { get; set; }
     public UserDto Creator { get; set; } = null!;
     public DateTime CreatedAt { get; set; }
-    public List<RoomMemberDto> Members { get; set; } = [];
+    public int MemberCount { get; set; }
+    public MessageDto? LastMessage { get; set; }
 
-    public static RoomDto FromEntity(Room room) => new RoomDto
+    public static RoomSummaryDto FromEntity(Room room) => new RoomSummaryDto
     {
         Id = room.Id,
         Name = room.Name,
@@ -20,6 +22,9 @@ public class RoomDto
         IsPrivate = room.IsPrivate,
         Creator = UserDto.FromEntity(room.Creator),
         CreatedAt = room.CreatedAt,
-        Members = [.. room.Members.Select(RoomMemberDto.FromEntity)]
+        MemberCount = room.Members.Count,
+        LastMessage = room.Messages
+            .OrderByDescending(m => m.CreatedAt).FirstOrDefault()?
+            .Transform(MessageDto.FromEntity)
     };
 }

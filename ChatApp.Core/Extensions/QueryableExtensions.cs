@@ -25,6 +25,9 @@ public static class QueryableExtensions
         Expression<Func<TPreviousProperty, TProperty>> navigationPropertyPath)
         where TEntity : class
     {
+        if (source is PassthroughIncludableQueryable<TEntity, TProperty> passthrough)
+            return passthrough;
+
         return condition
             ? source.ThenInclude(navigationPropertyPath)
             : new PassthroughIncludableQueryable<TEntity, TProperty>(source);
@@ -37,6 +40,9 @@ public static class QueryableExtensions
         Expression<Func<TPreviousProperty, TProperty>> navigationPropertyPath)
         where TEntity : class
     {
+        if (source is PassthroughIncludableQueryable<TEntity, TProperty> passthrough)
+            return passthrough;
+
         return condition
             ? source.ThenInclude(navigationPropertyPath)
             : new PassthroughIncludableQueryable<TEntity, TProperty>(source);
@@ -49,6 +55,9 @@ public static class QueryableExtensions
         Expression<Func<TPreviousProperty, TProperty>> navigationPropertyPath)
         where TEntity : class
     {
+        if (source is PassthroughIncludableQueryable<TEntity, TProperty> passthrough)
+            return passthrough;
+
         return condition
             ? source.ThenInclude(navigationPropertyPath)
             : new PassthroughIncludableQueryable<TEntity, TProperty>(source);
