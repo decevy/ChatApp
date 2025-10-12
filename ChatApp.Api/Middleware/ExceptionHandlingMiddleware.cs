@@ -55,12 +55,10 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         context.Response.StatusCode = (int)statusCode;
 
         var response = new ErrorResponse(message);
-        
         var jsonResponse = JsonSerializer.Serialize(response, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-
         await context.Response.WriteAsync(jsonResponse);
     }
 }
