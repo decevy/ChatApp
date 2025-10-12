@@ -103,7 +103,38 @@ dotnet ef database update MigrationName
 
 # Generate SQL script for migration
 dotnet ef migrations script
+
+# Drop database completely (will need to re-migrate)
+dotnet ef database drop
+
+# Drop and recreate with seed data
+dotnet ef database drop --force
+dotnet ef database update
+# Then run the API - seed data will be added automatically on startup
 ```
+
+### Resetting Database and Seed Data
+If you want to reset the database and re-run the seed data:
+
+```bash
+# Option 1: Using EF Core (from ChatApp.Api directory)
+cd ChatApp.Api
+dotnet ef database drop --force
+dotnet ef database update
+dotnet run  # Seed data runs on startup
+
+# Option 2: Using Docker (complete reset)
+docker-compose down -v  # Remove all volumes including database
+docker-compose up -d
+cd ChatApp.Api
+dotnet ef database update
+dotnet run  # Seed data runs on startup
+```
+
+**Note**: The seeder only runs if the database is empty (no users exist). After running these commands, the database will be populated with:
+- 3 test users (aya, bobby, carlos) - password: `test123`
+- 3 test rooms (General, Bachata, Gym bros)
+- Sample messages in each room
 
 ## Troubleshooting
 
