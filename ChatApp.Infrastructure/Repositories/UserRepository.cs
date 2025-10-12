@@ -87,4 +87,18 @@ public class UserRepository(ChatDbContext context) : IUserRepository
             .WhereId(id)
             .AnyAsync();
     }
+
+    public async Task<bool> IsEmailTakenAsync(string email) 
+    {
+        return await Query()
+            .WhereEmail(email)
+            .AnyAsync();
+    }
+
+    public async Task<bool> IsUsernameTakenAsync(string username) 
+    {
+        return await Query()
+            .WhereUsername(username)
+            .AnyAsync();
+    }
 }

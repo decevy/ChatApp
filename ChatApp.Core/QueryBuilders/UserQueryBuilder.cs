@@ -66,7 +66,7 @@ public class UserQueryBuilder(IQueryable<User> query)
         return this;
     }
 
-    public UserQueryBuilder WhereSearchTerm(string searchTerm)
+    public UserQueryBuilder WhereSearchTerm(string searchTerm) // todo: check how safe this is (sql injection)
     {
         var lowerTerm = searchTerm.ToLower();
         _query = _query.Where(u => 
