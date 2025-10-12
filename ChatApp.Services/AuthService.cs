@@ -114,17 +114,15 @@ public class AuthService(IUserRepository userRepository, IConfiguration config) 
         };
     }
 
-    public async Task<bool> RevokeTokenAsync(int userId)
+    public async Task RevokeTokenAsync(int userId)
     {
-        var user = await userRepository.FindByIdAsync(userId);
-        if (user == null) return false;
+        var user = await userRepository.FindByIdAsync(userId)
+            ?? throw new NotFoundException("User", userId);
 
         user.RefreshToken = null;
         user.RefreshTokenExpiry = null;
         user.IsOnline = false;
         await userRepository.UpdateAsync(user);
-
-        return true;
     }
 
     public string GenerateJwtToken(int userId, string email, string username)

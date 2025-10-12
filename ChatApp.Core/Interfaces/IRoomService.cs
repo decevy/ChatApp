@@ -11,7 +11,7 @@ public interface IRoomService
     Task<RoomDto?> GetRoomAsync(int roomId, int userId);
     Task<RoomDto> CreateRoomAsync(CreateRoomRequest request, int userId);
     Task<RoomDto> UpdateRoomAsync(int roomId, UpdateRoomRequest request, int userId);
-    Task<bool> DeleteRoomAsync(int roomId, int userId);
+    Task DeleteRoomAsync(int roomId, int userId);
     
     // Member operations
     Task AddMemberAsync(int roomId, AddRoomMemberRequest request, int userId);

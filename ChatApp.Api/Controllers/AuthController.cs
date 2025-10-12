@@ -40,10 +40,7 @@ public class AuthController(IAuthService authService) : ControllerBase
             return Unauthorized(new ErrorResponse("Invalid token"));
 
         var userId = int.Parse(userIdClaim.Value);
-        var success = await authService.RevokeTokenAsync(userId);
-
-        if (!success)
-            return BadRequest(new ErrorResponse("Failed to logout"));
+        await authService.RevokeTokenAsync(userId);
 
         return Ok(new MessageResponse("Logged out successfully"));
     }

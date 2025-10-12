@@ -85,19 +85,9 @@ public class RoomsController(IRoomService roomService) : ControllerBase
     public async Task<IActionResult> DeleteRoom(int roomId)
     {
         var userId = GetCurrentUserId();
-        
-        try
-        {
-            var deleted = await roomService.DeleteRoomAsync(roomId, userId);
-            if (!deleted)
-                return NotFound(new ErrorResponse("Room not found"));
-            
-            return NoContent();
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Forbid();
-        }
+
+        await roomService.DeleteRoomAsync(roomId, userId);
+        return NoContent();
     }
 
     /// <summary>

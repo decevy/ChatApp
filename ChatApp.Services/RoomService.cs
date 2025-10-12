@@ -104,18 +104,15 @@ public class RoomService(
         return RoomDto.FromEntity(updatedRoom);
     }
 
-    public async Task<bool> DeleteRoomAsync(int roomId, int userId)
+    public async Task DeleteRoomAsync(int roomId, int userId)
     {
         if (!await roomRepository.IsUserRoomAdminAsync(roomId, userId))
             throw new ForbiddenException("User is not an admin of this room");
 
-        var room = await roomRepository.FindByIdAsync(roomId);
-        if (room == null)
-            return false;
+        if (!await roomRepository.ExistsAsync(roomId))
+            throw new NotFoundException("Room", roomId);
 
         await roomRepository.DeleteAsync(roomId);
-        
-        return true;
     }
 
     public async Task AddMemberAsync(int roomId, AddRoomMemberRequest request, int userId)
@@ -161,7 +158,9 @@ public class RoomService(
         // Prevent removing the last admin
         if (member.Role == RoomRole.Admin)
         {
-            var roomWithMembers = await roomRepository.Query().WithMembers().FindByIdAsync(roomId);
+            var roomWithMembers = await roomRepository.Query()
+                .WithMembers()
+                .FindByIdAsync(roomId);
             var adminCount = roomWithMembers?.Members.Count(m => m.Role == RoomRole.Admin) ?? 0;
             if (adminCount == 1)
                 throw new BadRequestException("Cannot remove the last admin");
