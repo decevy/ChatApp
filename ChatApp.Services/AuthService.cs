@@ -115,7 +115,7 @@ public class AuthService(IUserRepository userRepository, IConfiguration config) 
 
     public async Task<bool> RevokeTokenAsync(int userId)
     {
-        var user = await userRepository.GetByIdAsync(userId);
+        var user = await userRepository.FindByIdAsync(userId);
         if (user == null) return false;
 
         user.RefreshToken = null;

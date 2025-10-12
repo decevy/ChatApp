@@ -25,6 +25,7 @@ builder.Services.AddScoped<IMessageRepository, MessageRepository>();
 
 // Service registrations
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IRoomService, RoomService>();
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

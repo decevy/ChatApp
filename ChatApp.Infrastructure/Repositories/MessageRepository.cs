@@ -13,6 +13,11 @@ public class MessageRepository(ChatDbContext context) : IMessageRepository
         return new MessageQueryBuilder(context.Messages.AsQueryable());
     }
 
+    public async Task<Message?> GetByIdAsync(int id)
+    {
+        return await Query().GetByIdAsync(id);
+    }
+
     public async Task<Message> CreateAsync(Message message)
     {
         context.Messages.Add(message);
