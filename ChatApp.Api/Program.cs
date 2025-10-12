@@ -7,6 +7,7 @@ using ChatApp.Core.Interfaces;
 using ChatApp.Infrastructure.Repositories;
 using ChatApp.Services;
 using ChatApp.Api.Hubs;
+using ChatApp.Api.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -136,6 +137,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Global exception handling middleware (must be early in the pipeline)
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseCors("AllowReactApp");
 app.UseAuthentication();

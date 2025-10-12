@@ -25,10 +25,9 @@ public class RoomQueryBuilder(IQueryable<Room> query)
 
     public RoomQueryBuilder WithMessages(int? limit = null, bool includeUsers = false)
     {
-        _query = _query
-            .Include(r => limit.HasValue ? 
-                r.Messages.OrderByDescending(m => m.CreatedAt).Take(limit.Value) : 
-                r.Messages)
+        _query = (limit.HasValue
+                ? _query.Include(r => r.Messages.OrderByDescending(m => m.CreatedAt).Take(limit.Value))
+                : _query.Include(r => r.Messages))
             .ThenIncludeIf(includeUsers, m => m.User);
         return this;
     }

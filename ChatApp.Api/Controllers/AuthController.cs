@@ -8,88 +8,44 @@ namespace ChatApp.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController(IAuthService authService, ILogger<AuthController> logger) : ControllerBase
+public class AuthController(IAuthService authService) : ControllerBase
 {
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
-        try
-        {
-            var response = await authService.RegisterAsync(request);
-            return Ok(response);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new ErrorResponse(ex.Message));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error during registration");
-            return StatusCode(500, new ErrorResponse("An error occurred during registration"));
-        }
+        var response = await authService.RegisterAsync(request);
+        return Ok(response);
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        try
-        {
-            var response = await authService.LoginAsync(request);
-            return Ok(response);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new ErrorResponse(ex.Message));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error during login");
-            return StatusCode(500, new ErrorResponse("An error occurred during login"));
-        }
+        var response = await authService.LoginAsync(request);
+        return Ok(response);
     }
 
     [HttpPost("refresh")]
     public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
     {
-        try
-        {
-            var response = await authService.RefreshTokenAsync(request.RefreshToken);
-            return Ok(response);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new ErrorResponse(ex.Message));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error during token refresh");
-            return StatusCode(500, new ErrorResponse("An error occurred during token refresh"));
-        }
+        var response = await authService.RefreshTokenAsync(request.RefreshToken);
+        return Ok(response);
     }
 
     [Authorize]
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
-        try
-        {
-            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-            if (userIdClaim == null)
-                return Unauthorized(new ErrorResponse("Invalid token"));
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (userIdClaim == null)
+            return Unauthorized(new ErrorResponse("Invalid token"));
 
-            var userId = int.Parse(userIdClaim.Value);
-            var success = await authService.RevokeTokenAsync(userId);
+        var userId = int.Parse(userIdClaim.Value);
+        var success = await authService.RevokeTokenAsync(userId);
 
-            if (!success)
-                return BadRequest(new ErrorResponse("Failed to logout"));
+        if (!success)
+            return BadRequest(new ErrorResponse("Failed to logout"));
 
-            return Ok(new MessageResponse("Logged out successfully"));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error during logout");
-            return StatusCode(500, new ErrorResponse("An error occurred during logout"));
-        }
+        return Ok(new MessageResponse("Logged out successfully"));
     }
 
     [Authorize]

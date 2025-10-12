@@ -13,9 +13,10 @@ public interface IRoomRepository
     Task DeleteAsync(int id);
 
     RoomMemberQueryBuilder QueryRoomMembers();
-    Task<RoomMember?> GetRoomMemberAsync(int roomId, int userId);
+    Task<RoomMember?> FindRoomMemberAsync(int roomId, int userId);
     Task AddRoomMemberAsync(RoomMember member);
     Task RemoveRoomMemberAsync(int roomId, int userId);
     Task<bool> IsUserMemberAsync(int roomId, int userId);
     Task<bool> IsUserRoomAdminAsync(int roomId, int userId);
+    Task<bool> ExistsAsync(int id);
 }

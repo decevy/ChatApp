@@ -31,7 +31,7 @@ public class RoomRepository(ChatDbContext context) : IRoomRepository
         
         return await Query()
             .WithFullDetails()
-            .GetByIdAsync(room.Id) ?? room;
+            .GetByIdAsync(room.Id);
     }
 
     public async Task UpdateAsync(Room room)
@@ -49,6 +49,11 @@ public class RoomRepository(ChatDbContext context) : IRoomRepository
             await context.SaveChangesAsync();
         }
     }
+
+    public async Task<bool> ExistsAsync(int id)
+    {
+        return await context.Rooms.AnyAsync(r => r.Id == id);
+    }
     #endregion
 
     #region Room Members
@@ -57,7 +62,7 @@ public class RoomRepository(ChatDbContext context) : IRoomRepository
         return new RoomMemberQueryBuilder(context.RoomMembers.AsQueryable());
     }
 
-    public async Task<RoomMember?> GetRoomMemberAsync(int roomId, int userId)
+    public async Task<RoomMember?> FindRoomMemberAsync(int roomId, int userId)
     {
         return await QueryRoomMembers()
             .WhereRoomAndUser(roomId, userId)
@@ -73,7 +78,7 @@ public class RoomRepository(ChatDbContext context) : IRoomRepository
 
     public async Task RemoveRoomMemberAsync(int roomId, int userId)
     {
-        var member = await GetRoomMemberAsync(roomId, userId);
+        var member = await FindRoomMemberAsync(roomId, userId);
         if (member != null)
         {
             context.RoomMembers.Remove(member);

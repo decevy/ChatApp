@@ -2,6 +2,8 @@ using ChatApp.Core.Dtos;
 using ChatApp.Core.Dtos.Requests;
 using ChatApp.Core.Dtos.Responses;
 using ChatApp.Core.Entities;
+using ChatApp.Core.Exceptions;
+using ChatApp.Core.Extensions;
 using ChatApp.Core.Interfaces;
 
 namespace ChatApp.Services;
@@ -13,12 +15,14 @@ public class RoomService(
 {
     public async Task<List<RoomSummaryDto>> GetUserRoomsAsync(int userId)
     {
+        // Get all rooms for user
         var rooms = await roomRepository.Query()
             .WithCreator()
             .WithMembers()
             .WhereUserIsMember(userId)
             .ToListAsync();
         
+        // Get last message for each room and create dtos
         var roomDtos = new List<RoomSummaryDto>();
         foreach (var room in rooms)
         {
@@ -36,24 +40,21 @@ public class RoomService(
     {
         // Check if user is a member
         if (!await roomRepository.IsUserMemberAsync(roomId, userId))
-            throw new UnauthorizedAccessException("User is not a member of this room");
+            throw new ForbiddenException("User is not a member of this room");
         
+        // Get room by id
         var room = await roomRepository.Query()
             .WithCreator()
             .WithMembers()
             .FindByIdAsync(roomId);
-        
-        if (room == null)
-            return null;
-
-        return RoomDto.FromEntity(room);
+    
+        return room?.Transform(RoomDto.FromEntity);
     }
 
     public async Task<RoomDto> CreateRoomAsync(CreateRoomRequest request, int userId)
     {
-        var user = await userRepository.FindByIdAsync(userId);
-        if (user == null)
-            throw new InvalidOperationException("User not found");
+        var user = await userRepository.FindByIdAsync(userId)
+            ?? throw new NotFoundException("User", userId);
 
         // Create room
         var room = new Room
@@ -76,39 +77,37 @@ public class RoomService(
             JoinedAt = DateTime.UtcNow
         };
         await roomRepository.AddRoomMemberAsync(roomMember);
-        room.Members.Add(roomMember);
 
         return RoomDto.FromEntity(room);
     }
 
-    public async Task<RoomDto?> UpdateRoomAsync(int roomId, UpdateRoomRequest request, int userId)
+    public async Task<RoomDto> UpdateRoomAsync(int roomId, UpdateRoomRequest request, int userId)
     {
-        // Check if user is admin
         if (!await roomRepository.IsUserRoomAdminAsync(roomId, userId))
-            throw new UnauthorizedAccessException("User is not an admin of this room");
+            throw new ForbiddenException("User is not an admin of this room");
 
-        var room = await roomRepository.FindByIdAsync(roomId);
-        if (room == null)
-            return null;
+        // Query WITHOUT includes for the update (better performance)
+        var room = await roomRepository.FindByIdAsync(roomId)
+            ?? throw new NotFoundException("Room", roomId);
 
+        // Update room properties
         room.Name = request.Name;
         room.Description = request.Description;
-        
         await roomRepository.UpdateAsync(room);
 
-        room = await roomRepository.Query()
+        // Query WITH includes for DTO mapping
+        var updatedRoom = await roomRepository.Query()
             .WithCreator()
             .WithMembers()
-            .GetByIdAsync(room.Id);
+            .GetByIdAsync(roomId);
         
-        return RoomDto.FromEntity(room);
+        return RoomDto.FromEntity(updatedRoom);
     }
 
     public async Task<bool> DeleteRoomAsync(int roomId, int userId)
     {
-        // Check if user is admin
         if (!await roomRepository.IsUserRoomAdminAsync(roomId, userId))
-            throw new UnauthorizedAccessException("User is not an admin of this room");
+            throw new ForbiddenException("User is not an admin of this room");
 
         var room = await roomRepository.FindByIdAsync(roomId);
         if (room == null)
@@ -119,25 +118,21 @@ public class RoomService(
         return true;
     }
 
-    public async Task<string> AddMemberAsync(int roomId, AddRoomMemberRequest request, int userId)
+    public async Task AddMemberAsync(int roomId, AddRoomMemberRequest request, int userId)
     {
-        // Check if user is admin
         if (!await roomRepository.IsUserRoomAdminAsync(roomId, userId))
-            throw new UnauthorizedAccessException("User is not an admin of this room");
+            throw new ForbiddenException("User is not an admin of this room");
 
-        var room = await roomRepository.FindByIdAsync(roomId);
-        if (room == null)
-            throw new InvalidOperationException("Room not found");
+        if (!await roomRepository.ExistsAsync(roomId))
+            throw new NotFoundException("Room", roomId);
 
-        // Check if user to add exists
-        var userToAdd = await userRepository.FindByIdAsync(request.UserId);
-        if (userToAdd == null)
-            throw new InvalidOperationException("User not found");
+        if (!await userRepository.ExistsAsync(request.UserId))
+            throw new NotFoundException("User", request.UserId);
 
-        // Check if already a member
         if (await roomRepository.IsUserMemberAsync(roomId, request.UserId))
-            throw new InvalidOperationException("User is already a member");
+            throw new BadRequestException("User is already a member");
 
+        // Add room member
         await roomRepository.AddRoomMemberAsync(new RoomMember
         {
             UserId = request.UserId,
@@ -145,25 +140,23 @@ public class RoomService(
             Role = request.IsAdmin ? RoomRole.Admin : RoomRole.Member,
             JoinedAt = DateTime.UtcNow
         });
-
-        return $"User {userToAdd.Username} added to room";
     }
 
-    public async Task<bool> RemoveMemberAsync(int roomId, int userIdToRemove, int currentUserId)
+    public async Task RemoveMemberAsync(int roomId, int userIdToRemove, int currentUserId)
     {
         // Users can remove themselves, or admins can remove others
         var isRemovingOther = userIdToRemove != currentUserId;
         var isAdmin = await roomRepository.IsUserRoomAdminAsync(roomId, currentUserId);
         if (isRemovingOther && !isAdmin)
-            throw new UnauthorizedAccessException("Only admins can remove other members");
+            throw new ForbiddenException("Only admins can remove other members");
 
-        var room = await roomRepository.FindByIdAsync(roomId);
-        if (room == null)
-            return false;
+        // Check if room exists
+        if (!await roomRepository.ExistsAsync(roomId))
+            throw new NotFoundException("Room", roomId);
 
-        var member = await roomRepository.GetRoomMemberAsync(roomId, userIdToRemove);
-        if (member == null)
-            throw new InvalidOperationException("User is not a member of this room");
+        // Get room member by id
+        var member = await roomRepository.FindRoomMemberAsync(roomId, userIdToRemove)
+            ?? throw new NotFoundException($"User with ID {userIdToRemove} is not a member of this room");
 
         // Prevent removing the last admin
         if (member.Role == RoomRole.Admin)
@@ -171,19 +164,17 @@ public class RoomService(
             var roomWithMembers = await roomRepository.Query().WithMembers().FindByIdAsync(roomId);
             var adminCount = roomWithMembers?.Members.Count(m => m.Role == RoomRole.Admin) ?? 0;
             if (adminCount == 1)
-                throw new InvalidOperationException("Cannot remove the last admin");
+                throw new BadRequestException("Cannot remove the last admin");
         }
 
         await roomRepository.RemoveRoomMemberAsync(roomId, userIdToRemove);
-        
-        return true;
     }
 
     public async Task<PaginatedResponse<MessageDto>> GetRoomMessagesAsync(int roomId, int userId, int page, int pageSize)
     {
         // Check if user is a member
         if (!await roomRepository.IsUserMemberAsync(roomId, userId))
-            throw new UnauthorizedAccessException("User is not a member of this room");
+            throw new ForbiddenException("User is not a member of this room");
 
         if (page < 1) page = 1;
         if (pageSize is < 1 or > 100) pageSize = 50;

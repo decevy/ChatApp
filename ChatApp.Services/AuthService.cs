@@ -8,6 +8,7 @@ using ChatApp.Core.Dtos;
 using ChatApp.Core.Dtos.Requests;
 using ChatApp.Core.Dtos.Responses;
 using ChatApp.Core.Entities;
+using ChatApp.Core.Exceptions;
 using ChatApp.Core.Interfaces;
 
 namespace ChatApp.Services;
@@ -19,12 +20,12 @@ public class AuthService(IUserRepository userRepository, IConfiguration config) 
         // Check if email already exists
         var existingUser = await userRepository.FindByEmailAsync(request.Email);
         if (existingUser != null)
-            throw new InvalidOperationException("Email already registered");
+            throw new BadRequestException("Email already registered");
 
         // Check if username already exists
         var existingUsername = await userRepository.FindByUsernameAsync(request.Username);
         if (existingUsername != null)
-            throw new InvalidOperationException("Username already taken");
+            throw new BadRequestException("Username already taken");
 
         var passwordHash = HashPassword(request.Password);
 
@@ -61,11 +62,11 @@ public class AuthService(IUserRepository userRepository, IConfiguration config) 
     {
         // Find user
         var user = await userRepository.FindByEmailAsync(request.Email)
-            ?? throw new UnauthorizedAccessException("Invalid credentials");
+            ?? throw new UnauthorizedException("Invalid credentials");
 
         // Verify password
         if (!VerifyPassword(request.Password, user.PasswordHash))
-            throw new UnauthorizedAccessException("Invalid credentials");
+            throw new UnauthorizedException("Invalid credentials");
 
         // Generate tokens
         var accessToken = GenerateJwtToken(user.Id, user.Email, user.Username);
@@ -94,7 +95,7 @@ public class AuthService(IUserRepository userRepository, IConfiguration config) 
         var user = await userRepository.FindByRefreshTokenAsync(hashedToken);
 
         if (user?.RefreshTokenExpiry == null || user.RefreshTokenExpiry < DateTime.UtcNow)
-            throw new UnauthorizedAccessException("Invalid or expired refresh token");
+            throw new UnauthorizedException("Invalid or expired refresh token");
 
         // Generate new tokens
         var newAccessToken = GenerateJwtToken(user.Id, user.Email, user.Username);

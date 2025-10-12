@@ -39,18 +39,11 @@ public class RoomsController(IRoomService roomService) : ControllerBase
     {
         var userId = GetCurrentUserId();
         
-        try
-        {
-            var room = await roomService.GetRoomAsync(roomId, userId);
-            if (room == null)
-                return NotFound(new ErrorResponse("Room not found"));
+        var room = await roomService.GetRoomAsync(roomId, userId);
+        if (room == null)
+            return NotFound(new ErrorResponse("Room not found"));
 
-            return Ok(room);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Forbid();
-        }
+        return Ok(room);
     }
 
     /// <summary>
@@ -63,15 +56,8 @@ public class RoomsController(IRoomService roomService) : ControllerBase
     {
         var userId = GetCurrentUserId();
         
-        try
-        {
-            var room = await roomService.CreateRoomAsync(request, userId);
-            return CreatedAtAction(nameof(GetRoom), new { roomId = room.Id }, room);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new ErrorResponse(ex.Message));
-        }
+        var room = await roomService.CreateRoomAsync(request, userId);
+        return CreatedAtAction(nameof(GetRoom), new { roomId = room.Id }, room);
     }
 
     /// <summary>
@@ -85,18 +71,8 @@ public class RoomsController(IRoomService roomService) : ControllerBase
     {
         var userId = GetCurrentUserId();
         
-        try
-        {
-            var room = await roomService.UpdateRoomAsync(roomId, request, userId);
-            if (room == null)
-                return NotFound(new ErrorResponse("Room not found"));
-
-            return Ok(room);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Forbid();
-        }
+        var room = await roomService.UpdateRoomAsync(roomId, request, userId);
+        return Ok(room);
     }
 
     /// <summary>
@@ -136,22 +112,11 @@ public class RoomsController(IRoomService roomService) : ControllerBase
     {
         var userId = GetCurrentUserId();
         
-        try
-        {
-            var message = await roomService.AddMemberAsync(roomId, request, userId);
-            return CreatedAtAction(
-                nameof(GetRoom), 
-                new { roomId }, 
-                new MessageResponse(message));
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Forbid();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new ErrorResponse(ex.Message));
-        }
+        await roomService.AddMemberAsync(roomId, request, userId);
+        return CreatedAtAction(
+            nameof(GetRoom), 
+            new { roomId }, 
+            new MessageResponse("Member added successfully"));
     }
 
     /// <summary>
@@ -166,22 +131,8 @@ public class RoomsController(IRoomService roomService) : ControllerBase
     {
         var currentUserId = GetCurrentUserId();
         
-        try
-        {
-            var removed = await roomService.RemoveMemberAsync(roomId, userId, currentUserId);
-            if (!removed)
-                return NotFound(new ErrorResponse("Room not found"));
-            
-            return NoContent();
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Forbid();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new ErrorResponse(ex.Message));
-        }
+        await roomService.RemoveMemberAsync(roomId, userId, currentUserId);
+        return NoContent();
     }
 
     /// <summary>
@@ -198,15 +149,8 @@ public class RoomsController(IRoomService roomService) : ControllerBase
     {
         var userId = GetCurrentUserId();
         
-        try
-        {
-            var response = await roomService.GetRoomMessagesAsync(roomId, userId, page, pageSize);
-            return Ok(response);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Forbid();
-        }
+        var response = await roomService.GetRoomMessagesAsync(roomId, userId, page, pageSize);
+        return Ok(response);
     }
 
     private int GetCurrentUserId()
