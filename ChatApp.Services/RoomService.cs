@@ -45,7 +45,7 @@ public class RoomService(
         // Get room by id
         var room = await roomRepository.Query()
             .WithCreator()
-            .WithMembers()
+            .WithMembers(includeUsers: true)
             .FindByIdAsync(roomId);
     
         return room?.Transform(RoomDto.FromEntity);

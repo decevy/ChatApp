@@ -27,9 +27,8 @@ public class AuthService(IUserRepository userRepository, IConfiguration config) 
         if (existingUsername != null)
             throw new BadRequestException("Username already taken");
 
-        var passwordHash = HashPassword(request.Password);
-
         // Create user
+        var passwordHash = HashPassword(request.Password);
         var user = new User
         {
             Username = request.Username,
@@ -60,11 +59,10 @@ public class AuthService(IUserRepository userRepository, IConfiguration config) 
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
     {
-        // Find user
+        // Verify user credentials
         var user = await userRepository.FindByEmailAsync(request.Email)
-            ?? throw new UnauthorizedException("Invalid credentials");
+            ?? throw new UnauthorizedException("Invalid credentials"); 
 
-        // Verify password
         if (!VerifyPassword(request.Password, user.PasswordHash))
             throw new UnauthorizedException("Invalid credentials");
 
@@ -72,7 +70,7 @@ public class AuthService(IUserRepository userRepository, IConfiguration config) 
         var accessToken = GenerateJwtToken(user.Id, user.Email, user.Username);
         var refreshToken = GenerateRefreshToken();
 
-        // Store refresh token hash
+        // Store refresh token hash and update online status
         user.RefreshToken = HashRefreshToken(refreshToken);
         user.RefreshTokenExpiry = GetRefreshTokenExpiry();
         user.IsOnline = true;
@@ -89,11 +87,9 @@ public class AuthService(IUserRepository userRepository, IConfiguration config) 
 
     public async Task<LoginResponse> RefreshTokenAsync(string refreshToken)
     {
-        var hashedToken = HashRefreshToken(refreshToken);
-
         // Find user with this refresh token
+        var hashedToken = HashRefreshToken(refreshToken);
         var user = await userRepository.FindByRefreshTokenAsync(hashedToken);
-
         if (user?.RefreshTokenExpiry == null || user.RefreshTokenExpiry < DateTime.UtcNow)
             throw new UnauthorizedException("Invalid or expired refresh token");
 
