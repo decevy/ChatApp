@@ -2,71 +2,71 @@
 
 ## Prerequisites
 - Docker Desktop installed and running
-- .NET 8 SDK installed
+- .NET 9 SDK installed
 - Your preferred IDE (Visual Studio, Rider, or VS Code with C# extensions)
 
 ## Quick Start
 
 ### 1. Start Docker Services
 ```bash
-# From the project root directory
-docker-compose up -d
+# From the StoryApp directory (where docker-compose.yml lives)
+docker compose up -d
 
 # Verify all services are running
-docker-compose ps
+docker compose ps
 ```
 
 You should see three services running:
-- `chatapp-postgres` on port 5432
-- `chatapp-redis` on port 6379
-- `chatapp-pgadmin` on port 5050
+- `storyapp-postgres` on port 5432
+- `storyapp-redis` on port 6379
+- `storyapp-pgadmin` on port 5050
 
-### 2. Update appsettings.Development.json
-Place the provided `appsettings.Development.json` in your `src/StoryApp.API/` directory.
+### 2. Configure the API
+Place or merge `appsettings.Development.json` in **`StoryApp.Api/`** so `ConnectionStrings:DefaultConnection` points at the Postgres container (see **Accessing Services** below for host, database, and credentials).
 
-### 3. Apply Database Migration
+### 3. Apply Database Migrations
 ```bash
-# Navigate to the API project
-cd src/StoryApp.API
+# From the StoryApp solution root
+dotnet ef database update --project StoryApp.Infrastructure --startup-project StoryApp.Api
 
-# Apply the existing migration
-dotnet ef database update
-
-# Verify migration succeeded
-dotnet ef migrations list
+# Optional: list migrations
+dotnet ef migrations list --project StoryApp.Infrastructure --startup-project StoryApp.Api
 ```
+
+The API also runs pending migrations on startup (`Database.Migrate()`), but applying explicitly is useful before the first run.
 
 ### 4. Run the API
 ```bash
-# From src/StoryApp.API
-dotnet run
-
-# Or use your IDE's run/debug functionality
+dotnet run --project StoryApp.Api
 ```
 
-The API should start on `https://localhost:7001` and `http://localhost:5001`
+Default URLs (see `StoryApp.Api/Properties/launchSettings.json`):
+- HTTPS: `https://localhost:7011`
+- HTTP: `http://localhost:5056`
+
+Use your IDE’s run profile (**https** recommended) or the command above.
 
 ## Accessing Services
 
 ### PostgreSQL Database
 - **Host**: localhost:5432
-- **Database**: chatappdb_dev
-- **Username**: chatapp_user
+- **Database**: storyappdb_dev
+- **Username**: storyapp_user
 - **Password**: dev_password_123
 
 ### pgAdmin (Web UI for PostgreSQL)
 - **URL**: http://localhost:5050
-- **Email**: admin@chatapp.dev
+- **Email**: admin@storyapp.dev
 - **Password**: admin123
 
 To connect to your database in pgAdmin:
 1. Right-click "Servers" → "Register" → "Server"
 2. General Tab: Name = "StoryApp Dev"
 3. Connection Tab:
-   - Host: postgres (use container name, not localhost)
+   - Host: postgres (use the Docker service name, not localhost)
    - Port: 5432
-   - Database: chatappdb_dev
-   - Username: chatapp_user
+   - Database: storyappdb_dev
+   - Username: storyapp_user
    - Password: dev_password_123
 
 ### Redis
@@ -78,85 +78,78 @@ To connect to your database in pgAdmin:
 ### Docker
 ```bash
 # Stop all services
-docker-compose down
+docker compose down
 
 # Stop and remove all data (fresh start)
-docker-compose down -v
+docker compose down -v
 
 # View logs
-docker-compose logs -f [service_name]
+docker compose logs -f [service_name]
 
 # Restart a specific service
-docker-compose restart postgres
+docker compose restart postgres
 ```
 
 ### Entity Framework
 ```bash
-# Create a new migration
-dotnet ef migrations add MigrationName
+# Add a new migration (from solution root)
+dotnet ef migrations add MigrationName --project StoryApp.Infrastructure --startup-project StoryApp.Api
 
 # Remove last migration (if not applied)
-dotnet ef migrations remove
+dotnet ef migrations remove --project StoryApp.Infrastructure --startup-project StoryApp.Api
 
-# Update database to specific migration
-dotnet ef database update MigrationName
+# Update database to a specific migration
+dotnet ef database update MigrationName --project StoryApp.Infrastructure --startup-project StoryApp.Api
 
-# Generate SQL script for migration
-dotnet ef migrations script
+# Generate SQL script for migrations
+dotnet ef migrations script --project StoryApp.Infrastructure --startup-project StoryApp.Api
 
-# Drop database completely (will need to re-migrate)
-dotnet ef database drop
-
-# Drop and recreate with seed data
-dotnet ef database drop --force
-dotnet ef database update
-# Then run the API - seed data will be added automatically on startup
+# Drop database (use with care)
+dotnet ef database drop --project StoryApp.Infrastructure --startup-project StoryApp.Api
 ```
 
 ### Resetting Database and Seed Data
 If you want to reset the database and re-run the seed data:
 
 ```bash
-# Option 1: Using EF Core (from StoryApp.Api directory)
-cd StoryApp.Api
-dotnet ef database drop --force
-dotnet ef database update
-dotnet run  # Seed data runs on startup
+# Option 1: Using EF Core (from solution root)
+dotnet ef database drop --force --project StoryApp.Infrastructure --startup-project StoryApp.Api
+dotnet ef database update --project StoryApp.Infrastructure --startup-project StoryApp.Api
+dotnet run --project StoryApp.Api   # Seed runs when the DB is empty
 
 # Option 2: Using Docker (complete reset)
-docker-compose down -v  # Remove all volumes including database
-docker-compose up -d
-cd StoryApp.Api
-dotnet ef database update
-dotnet run  # Seed data runs on startup
+docker compose down -v
+docker compose up -d
+dotnet ef database update --project StoryApp.Infrastructure --startup-project StoryApp.Api
+dotnet run --project StoryApp.Api
 ```
 
 **Note**: The seeder only runs if the database is empty (no users exist). After running these commands, the database will be populated with:
-- 3 test users (aya, bobby, carlos) - password: `test123`
-- 3 test rooms (General, Bachata, Gym bros)
-- Sample messages in each room
+- 3 test users (aya, bobby, carlos) — password: `test123`
+- 3 test stories (General, Bachata, Gym bros)
+- Sample turns across those stories
 
 ## Troubleshooting
 
 ### Database connection fails
-- Ensure PostgreSQL container is running: `docker-compose ps`
-- Check container logs: `docker-compose logs postgres`
-- Verify connection string in appsettings.Development.json
+- Ensure PostgreSQL container is running: `docker compose ps`
+- Check container logs: `docker compose logs postgres`
+- Verify the connection string in `StoryApp.Api/appsettings.Development.json`
 
 ### Port conflicts
-If ports 5432, 6379, or 5050 are already in use, update docker-compose.yml:
+If ports 5432, 6379, or 5050 are already in use, update `docker-compose.yml`:
 ```yaml
 ports:
   - "5433:5432"  # Change first number only
 ```
-Then update your connection string accordingly.
+Then update your connection string’s port accordingly.
 
 ### Migration fails
-- Ensure previous migration was created: Check `src/StoryApp.Infrastructure/Migrations/`
-- Try removing and recreating: `dotnet ef migrations remove` then `dotnet ef migrations add Initial`
+- Ensure migrations exist under `StoryApp.Infrastructure/Migrations/`
+- Try removing and recreating only in a dev database: `dotnet ef migrations remove` then `dotnet ef migrations add InitialCreate` (names may vary)
 
 ## Next Steps
 Once your environment is running:
-1. Test database connection by running the API
-2. Use Swagger UI at `https://localhost:7001/swagger` to explore API endpoints
-3. Start implementing the service layer
+1. Confirm the API starts and connects to PostgreSQL
+2. Open Swagger UI at `https://localhost:7011/swagger` (when using the HTTPS profile)
+3. Connect a client to `/storyHub` with JWT via the `access_token` query parameter for real-time turns

@@ -1,390 +1,172 @@
 # StoryApp - Application Specification
 
 ## Overview
-StoryApp is a real-time chat application consisting of a .NET 9 backend API and a React TypeScript frontend. Users can create and join chat rooms, send messages, and interact in real-time through SignalR WebSocket connections.
+StoryApp is a collaborative storytelling backend: a .NET 9 Web API with PostgreSQL and SignalR. Users join **stories**, add sequential **turns** (text contributions), and see updates in real time. JWT secures both REST and the SignalR hub.
+
+This repository contains the **backend solution** only; a separate React (or other) client would consume these APIs and connect to **`/storyHub`**.
 
 ## Architecture
 
 **Backend Stack:**
 - .NET 9 Web API
-- PostgreSQL database with Entity Framework Core
-- SignalR for real-time communication
-- JWT Bearer token authentication
-- Clean Architecture pattern with separation of concerns
+- PostgreSQL with Entity Framework Core
+- SignalR for real-time turns, typing, and presence-style user status
+- JWT Bearer authentication (HTTP header and hub query string)
+- Clean Architecture: Core, Infrastructure, Services, Api
 
-**Frontend Stack:**
-- React 19 with TypeScript
-- Vite build tool
-- Tailwind CSS 4 for styling
-- SignalR client (@microsoft/signalr)
-- React Router for navigation
-- Axios for HTTP requests
-- date-fns for date formatting
+**Typical client stack (not in this repo):**
+- React with TypeScript, Vite, SignalR client, Axios — aligned with product docs elsewhere in the monorepo if applicable
 
 **Project Structure:**
-- `StoryApp.Core` - Domain layer (entities, DTOs, interfaces)
-- `StoryApp.Infrastructure` - Data access layer (EF Core, repositories)
-- `StoryApp.Services` - Business logic layer
-- `StoryApp.Api` - Web API layer (controllers, SignalR hub)
-- `chatapp-web` - React frontend application
+- `StoryApp.Core` — Entities, DTOs, interfaces, exceptions, query builders
+- `StoryApp.Infrastructure` — DbContext, repositories, migrations, seeding
+- `StoryApp.Services` — Auth, user, and story application services
+- `StoryApp.Api` — Controllers, SignalR `StoryHub`, middleware, DI
 
 ## Core Features
 
 ### 1. Authentication & Authorization
-- User registration with username, email, and password
-- User login with JWT token generation
-- JWT access tokens with 24-hour expiry
-- Refresh token support with 7-day expiry
-- Token refresh endpoint
-- Logout functionality
-- Protected routes requiring authentication
-- JWT authentication for both REST API and SignalR connections
+- Register, login, refresh, logout
+- JWT access tokens (configurable expiry; default 24 hours in dev settings)
+- Refresh tokens with configurable lifetime
+- Protected REST routes and hub connections
 
 ### 2. User Management
-- User profile management
+- Profile read/update for the current user
 - User search by username or email
-- Online/offline status tracking
-- Last seen timestamp tracking
-- Automatic status updates on connection/disconnection
-- Get current user profile
-- Get user by ID
-- Update user profile
+- Get user by ID; list users
+- Online/offline flag and last-seen updates (including on hub connect/disconnect)
 
-### 3. Chat Rooms
-- Create chat rooms with name, description, and privacy setting
-- List all rooms the user is a member of
-- Get detailed room information
-- Update room information (name, description) - admin/moderator only
-- Delete rooms - admin only
-- Support for both public and private rooms
-- Room membership management
+### 3. Stories (collaborative spaces)
+- Create stories (name, description, public/private)
+- List stories the current user collaborates on
+- Get story detail (collaborators only)
+- Update story metadata (admin)
+- Delete story (admin)
+- Story creator becomes admin on create
 
-**Room Roles:**
-- **Admin** - Full control over room settings and members
-- **Moderator** - Can manage members and messages
-- **Member** - Basic participation rights
+**Story roles (`StoryMember`):**
+- **Admin** — Full control over story settings and members
+- **Moderator** — Can manage members (per service rules)
+- **Member** — Can participate (turns, subject to membership)
 
-### 4. Room Membership
-- Add members to rooms (requires appropriate permissions)
-- Remove members from rooms (requires appropriate permissions)
-- Automatic room creator assignment as admin
-- Unique membership per user per room
-- Track join dates
+### 4. Story membership
+- Add collaborators (`POST .../members`)
+- Remove collaborators (`DELETE .../members/{userId}`)
+- Unique membership per user per story
+- Join timestamps tracked
 
-### 5. Messaging
-- Send text messages in rooms
-- Real-time message delivery via SignalR
-- Message history with pagination (default 50 messages per page)
-- Edit own messages
-- Delete own messages
-- Message timestamps
-- Edit timestamps for edited messages
-- Support for message types: Text, Image, File, System (data model ready, UI implementation may vary)
-- Message attachments support (AttachmentUrl, AttachmentFileName fields in data model)
+### 5. Turns (contributions within a story)
+- **REST:** Paginated turn history per story (`GET /api/stories/{storyId}/turns`)
+- **SignalR:** Send, edit, and delete turns in real time (`SendTurn`, `EditTurn`, `DeleteTurn`)
+- Turn types in the model include Text and placeholders for richer types; attachment URL/name fields exist on `Turn`
+- Edit/delete restricted to the turn author (enforced in the hub)
 
-### 6. Real-time Features (SignalR)
-- Real-time message broadcasting
-- User join/leave room notifications
-- Typing indicators (start/stop typing)
-- User status changes (online/offline) broadcast to all users
-- Message edit notifications
-- Message delete notifications
-- Automatic reconnection handling
-- Connection state management
+### 6. Real-time features (SignalR `/storyHub`)
+- Broadcast new, edited, and deleted turns to story groups
+- Join/leave story groups (`JoinStory`, `LeaveStory`) with membership checks
+- Typing indicators (`StartTyping`, `StopTyping`) scoped by story
+- User online/offline broadcasts (`UserStatusChanged`)
+- JWT supplied via query parameter: `?access_token={token}`
 
-### 7. Message Reactions (Data Model)
-- MessageReaction entity exists in database
-- Supports emoji reactions on messages
-- Unique constraint: one reaction per user per emoji per message
-- UI implementation may vary
+### 7. Turn reactions (data model)
+- `TurnReaction` entity: emoji per user per turn
+- Unique constraint on (TurnId, UserId, Emoji)
+- REST/hub surface for reactions may be extended over time; model is present for persistence
 
-## Database Schema
+## Database Schema (conceptual)
 
-### Users Table
-- `Id` (int, primary key)
-- `Username` (string, unique, max 50 chars)
-- `Email` (string, unique, max 255 chars)
-- `PasswordHash` (string, max 255 chars)
-- `CreatedAt` (datetime)
-- `LastSeen` (datetime)
-- `IsOnline` (boolean)
-- `RefreshToken` (string, nullable)
-- `RefreshTokenExpiry` (datetime, nullable)
+### Users
+- Identity, credentials (password hash), refresh token fields, `CreatedAt`, `LastSeen`, `IsOnline`
 
-### Rooms Table
-- `Id` (int, primary key)
-- `Name` (string, max 100 chars)
-- `Description` (string, max 500 chars, nullable)
-- `IsPrivate` (boolean)
-- `CreatedBy` (int, foreign key to Users)
-- `CreatedAt` (datetime)
+### Stories
+- `Name`, `Description`, `IsPrivate`, `CreatedBy`, `CreatedAt`
 
-### RoomMembers Table
-- `Id` (int, primary key)
-- `UserId` (int, foreign key to Users)
-- `RoomId` (int, foreign key to Rooms)
-- `Role` (enum: Member, Moderator, Admin)
-- `JoinedAt` (datetime)
-- Unique constraint on (UserId, RoomId)
+### StoryMembers
+- `UserId`, `StoryId`, `StoryRole`, `JoinedAt`
+- Unique (UserId, StoryId)
 
-### Messages Table
-- `Id` (int, primary key)
-- `Content` (string, max 2000 chars)
-- `UserId` (int, foreign key to Users)
-- `RoomId` (int, foreign key to Rooms)
-- `Type` (enum: Text, Image, File, System)
-- `CreatedAt` (datetime, indexed)
-- `EditedAt` (datetime, nullable)
-- `AttachmentUrl` (string, max 500 chars, nullable)
-- `AttachmentFileName` (string, max 255 chars, nullable)
-- Index on (RoomId, CreatedAt)
+### Turns
+- `Content`, `UserId`, `StoryId`, `Type`, `CreatedAt`, `EditedAt`, optional attachment fields
+- Indexed for efficient paging by story and time
 
-### MessageReactions Table
-- `Id` (int, primary key)
-- `MessageId` (int, foreign key to Messages)
-- `UserId` (int, foreign key to Users)
-- `Emoji` (string, max 10 chars)
-- `CreatedAt` (datetime)
-- Unique constraint on (MessageId, UserId, Emoji)
+### TurnReactions
+- `TurnId`, `UserId`, `Emoji`, `CreatedAt`
+- Unique (TurnId, UserId, Emoji)
+
+Exact column definitions and cascade behaviors live in EF configurations under `StoryApp.Infrastructure`.
 
 ## API Endpoints
 
 ### Authentication (`/api/auth`)
-- `POST /api/auth/register` - Register new user
-  - Body: `RegisterRequest` (Username, Email, Password)
-  - Returns: `AuthResponse` with tokens
-  
-- `POST /api/auth/login` - User login
-  - Body: `LoginRequest` (Username/Email, Password)
-  - Returns: `AuthResponse` with tokens
-  
-- `POST /api/auth/refresh` - Refresh access token
-  - Body: `RefreshTokenRequest` (RefreshToken)
-  - Returns: `AuthResponse` with new tokens
-  
-- `POST /api/auth/logout` - Logout (authenticated)
-  - Returns: Success message
-  
-- `GET /api/auth/me` - Get current user from token (authenticated)
-  - Returns: `CurrentUserResponse` (UserId, Username, Email)
+- `POST /api/auth/register` — `RegisterRequest` → token payload
+- `POST /api/auth/login` — `LoginRequest` → token payload
+- `POST /api/auth/refresh` — refresh token → new tokens
+- `POST /api/auth/logout` — revoke refresh token (authenticated)
+- `GET /api/auth/me` — current user ids from JWT (authenticated)
 
-### Rooms (`/api/rooms`)
-- `GET /api/rooms` - Get all rooms for current user (authenticated)
-  - Returns: `List<RoomSummaryDto>`
-  
-- `GET /api/rooms/{roomId}` - Get room details (authenticated)
-  - Returns: `RoomDto`
-  - Returns 403 if user is not a member
-  - Returns 404 if room doesn't exist
-  
-- `POST /api/rooms` - Create new room (authenticated)
-  - Body: `CreateRoomRequest` (Name, Description, IsPrivate)
-  - Returns: `RoomDto` (201 Created)
-  
-- `PUT /api/rooms/{roomId}` - Update room (authenticated, requires permissions)
-  - Body: `UpdateRoomRequest` (Name, Description)
-  - Returns: `RoomDto`
-  
-- `DELETE /api/rooms/{roomId}` - Delete room (authenticated, admin only)
-  - Returns: 204 No Content
-  
-- `GET /api/rooms/{roomId}/messages` - Get paginated messages (authenticated)
-  - Query params: `page` (default: 1), `pageSize` (default: 50)
-  - Returns: `PaginatedResponse<MessageDto>`
-  
-- `POST /api/rooms/{roomId}/members` - Add member to room (authenticated, requires permissions)
-  - Body: `AddRoomMemberRequest` (UserId, Role)
-  - Returns: Success message (201 Created)
-  
-- `DELETE /api/rooms/{roomId}/members/{userId}` - Remove member from room (authenticated, requires permissions)
-  - Returns: 204 No Content
+### Stories (`/api/stories`)
+- `GET /api/stories` — stories for the current user
+- `GET /api/stories/{storyId}` — detail (403 if not a collaborator, 404 if missing)
+- `POST /api/stories` — create story
+- `PUT /api/stories/{storyId}` — update (admin)
+- `DELETE /api/stories/{storyId}` — delete (admin)
+- `GET /api/stories/{storyId}/turns?page=&pageSize=` — paginated turns (default page size 50)
+- `POST /api/stories/{storyId}/members` — add collaborator
+- `DELETE /api/stories/{storyId}/members/{userId}` — remove collaborator
 
 ### Users (`/api/users`)
-- `GET /api/users/me` - Get current user profile (authenticated)
-  - Returns: `UserDto`
-  
-- `PUT /api/users/me` - Update current user profile (authenticated)
-  - Body: `UpdateUserRequest`
-  - Returns: `UserDto`
-  
-- `GET /api/users/{userId}` - Get user by ID (authenticated)
-  - Returns: `UserDto`
-  - Returns 404 if user doesn't exist
-  
-- `GET /api/users/search?query={query}` - Search users (authenticated)
-  - Returns: `List<UserDto>`
-  
-- `GET /api/users` - Get all users (authenticated)
-  - Returns: `List<UserDto>`
+- `GET /api/users/me` — current profile
+- `PUT /api/users/me` — update profile
+- `GET /api/users/{userId}` — user by id
+- `GET /api/users/search?query=` — search
+- `GET /api/users` — list users
 
 ### SignalR Hub (`/storyHub`)
 
-**Connection:**
-- Requires JWT authentication via query parameter: `?access_token={token}`
-- Automatic connection status tracking
-- Automatic user status updates on connect/disconnect
+**Connection:** JWT via `access_token` query parameter; `[Authorize]` on the hub.
 
-**Client Methods (Send to Server):**
-- `JoinRoom(int roomId)` - Join a room group
-  - Verifies user membership before joining
-  - Broadcasts `UserJoinedRoom` event to others in room
-  
-- `LeaveRoom(int roomId)` - Leave a room group
-  - Broadcasts `UserLeftRoom` event to others in room
-  
-- `SendMessage(int roomId, string content)` - Send a message
-  - Creates message in database
-  - Broadcasts `ReceiveMessage` event to all in room
-  
-- `EditMessage(int messageId, string newContent)` - Edit a message
-  - Only message owner can edit
-  - Broadcasts `MessageEdited` event to all in room
-  
-- `DeleteMessage(int messageId)` - Delete a message
-  - Only message owner can delete
-  - Broadcasts `MessageDeleted` event to all in room
-  
-- `StartTyping(int roomId)` - Start typing indicator
-  - Broadcasts `UserStartedTyping` event to others in room
-  
-- `StopTyping(int roomId)` - Stop typing indicator
-  - Broadcasts `UserStoppedTyping` event to others in room
+**Client → server (examples):**
+- `JoinStory(int storyId)` / `LeaveStory(int storyId)`
+- `SendTurn(int storyId, string content)`
+- `EditTurn(int turnId, string newContent)` / `DeleteTurn(int turnId)`
+- `StartTyping(int storyId)` / `StopTyping(int storyId)`
 
-**Server Events (Received by Client):**
-- `ReceiveMessage` - New message received
-  - Payload: `MessageDto`
-  
-- `MessageEdited` - Message was edited
-  - Payload: `MessageEditedDto` (Id, Content, EditedAt)
-  
-- `MessageDeleted` - Message was deleted
-  - Payload: `MessageDeletedDto` (Id, RoomId)
-  
-- `UserJoinedRoom` - User joined the room
-  - Payload: `RoomEventDto` (UserId, RoomId, Timestamp)
-  
-- `UserLeftRoom` - User left the room
-  - Payload: `RoomEventDto` (UserId, RoomId, Timestamp)
-  
-- `UserStartedTyping` - User started typing
-  - Payload: `TypingIndicatorDto` (UserId, Username, RoomId)
-  
-- `UserStoppedTyping` - User stopped typing
-  - Payload: `TypingIndicatorDto` (UserId, RoomId)
-  
-- `UserStatusChanged` - User online/offline status changed
-  - Payload: `UserStatusChangedDto` (UserId, IsOnline, LastSeen)
-  - Broadcast to all connected clients
+**Server → client (event names):**
+- `ReceiveTurn` — `TurnDto`
+- `TurnEdited` — `TurnEditedDto`
+- `TurnDeleted` — `TurnDeletedDto`
+- `UserJoinedStory` / `UserLeftStory` — `StoryEventDto`
+- `UserStartedTyping` / `UserStoppedTyping` — `TypingIndicatorDto` (includes `StoryId`)
+- `UserStatusChanged` — `UserStatusChangedDto`
 
-## Frontend Features
+## Security (summary)
+- Password hashing (BCrypt)
+- JWT for API and SignalR
+- Story membership checks for story-scoped operations
+- Hub uses `HubException` for predictable client errors
+- CORS policy `AllowReactApp` for typical local dev origins (see `Program.cs`)
 
-### Pages
-- **Login Page** - User authentication
-- **Registration Page** - New user registration
-- **Chat Page** - Main application interface with room list and chat area
+## Development features
+- Swagger in Development
+- Migrations applied on API startup
+- Idempotent seed when the database has no users (`StoryDbSeeder`)
 
-### Key Components
-- **ChatLayout** - Main layout component with sidebar and chat area
-- **RoomList** - Displays user's rooms in sidebar
-- **MessageList** - Displays messages in current room
-- **MessageInput** - Input component for sending messages
-- **ProtectedRoute** - Route guard for authenticated routes
+## Sample seed data
+- Users: `aya`, `bobby`, `carlos` (password `test123`)
+- Stories: "General", "Bachata", "Gym bros" (with mixed roles and sample turns)
 
-### Contexts
-- **AuthContext** - Manages authentication state, tokens, and user information
-- **ChatContext** - Manages chat state, rooms, messages, and SignalR connection
+## Configuration (reference)
+- **Connection string:** `DefaultConnection` in `StoryApp.Api` configuration (PostgreSQL)
+- **JWT:** `JwtSettings` — e.g. Issuer `StoryApp.API.Dev`, Audience `StoryApp.Web.Dev` in Development
+- **CORS:** e.g. `http://localhost:3000`, `http://localhost:5173`
 
-### Features
-- JWT token storage and management in memory/context
-- Automatic token refresh on expiry
-- Real-time message updates via SignalR
-- Room selection and switching
-- Message sending with real-time delivery
-- Connection status indication
-- Automatic SignalR reconnection on disconnect
-- Responsive UI with Tailwind CSS
-
-## Security Features
-- Password hashing with BCrypt
-- JWT token authentication for REST API
-- Refresh token rotation support
-- CORS configuration for specific frontend origins
-- Authorization checks for room operations
-- User ownership verification for message operations
-- Room membership verification for access control
-- Exception handling middleware for consistent error responses
-
-## Development Features
-- Swagger/OpenAPI documentation (available in development environment)
-- Database migrations with automatic application on startup
-- Database seeding with sample data (if database is empty)
-- Exception handling middleware
-- Comprehensive logging throughout application
-
-## Sample Data
-The application seeds the database with:
-- **3 sample users:**
-  - Username: `aya`, Email: `aya@test.com`, Password: `test123`
-  - Username: `bobby`, Email: `bobby@test.com`, Password: `test123`
-  - Username: `carlos`, Email: `carlos@test.com`, Password: `test123`
-  
-- **3 sample rooms:**
-  - "General" (public) - General discussion room
-  - "Bachata" (public) - Bachata chat and fun
-  - "Gym bros" (private) - Chat about gym and fitness
-  
-- Sample room memberships with different roles
-- Sample messages across rooms
-
-## Configuration
-
-### Database
-- PostgreSQL connection via connection string
-- Automatic migrations on application startup
-- Seeding runs automatically if database is empty
-
-### JWT Settings
-- Secret key configuration
-- Issuer: `StoryApp.API.Dev`
-- Audience: `StoryApp.Web.Dev`
-- Access token expiry: 24 hours (1440 minutes)
-- Refresh token expiry: 7 days
-
-### CORS
-- Allowed origins: `http://localhost:3000`, `http://localhost:5173`
-- Allows credentials
-- Allows any header and method
-
-### Environment
-- Development vs production environment configuration
-- Swagger UI available in development only
-
-## Technical Constraints
-
-### Field Limits
-- Maximum message content length: **2000 characters**
-- Maximum username length: **50 characters**
-- Maximum email length: **255 characters**
-- Maximum room name length: **100 characters**
-- Maximum room description length: **500 characters**
-- Maximum emoji length (reactions): **10 characters**
-- Maximum attachment URL length: **500 characters**
-- Maximum attachment filename length: **255 characters**
-
-### Defaults
-- Default message pagination: **50 messages per page**
-- JWT access token expiry: **24 hours**
-- Refresh token expiry: **7 days**
-
-### Database Relationships
-- User deletion cascades to messages and room memberships
-- Room deletion cascades to messages and room memberships
-- Message deletion cascades to reactions
-- Room creator deletion is restricted (prevents orphaned rooms)
+## Technical constraints (typical)
+- Turn content and string max lengths match EF `StringLength` on entities (e.g. long text fields on turns/stories/users)
+- Default turn pagination: **50** per page on `GetStoryTurns`
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** January 2025  
-**Note:** This specification documents the current state of the application as implemented. Future planned features or changes are not included in this document.
-
+**Document version:** 1.1  
+**Last updated:** April 2026  
+**Note:** Describes the backend as implemented in this repository; client apps and future features may extend the contract.
