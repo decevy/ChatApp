@@ -21,12 +21,12 @@ builder.Services.AddDbContext<ChatDbContext>(options =>
 
 // Repository registrations
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IRoomRepository, RoomRepository>();
-builder.Services.AddScoped<IMessageRepository, MessageRepository>();
+builder.Services.AddScoped<IStoryRepository, StoryRepository>();
+builder.Services.AddScoped<ITurnRepository, TurnRepository>();
 
 // Service registrations
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IRoomService, RoomService>();
+builder.Services.AddScoped<IStoryService, StoryService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
 // JWT Authentication
@@ -83,7 +83,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "ChatApp API",
         Version = "v1",
-        Description = "Real-time chat application API"
+        Description = "Collaborative story API with real-time turns"
     });
 
     // Add JWT Authentication to Swagger

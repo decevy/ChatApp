@@ -6,17 +6,17 @@ namespace ChatApp.Infrastructure.Data;
 public class ChatDbContext(DbContextOptions<ChatDbContext> options) : DbContext(options)
 {
     public DbSet<User> Users { get; set; }
-    public DbSet<Room> Rooms { get; set; }
-    public DbSet<Message> Messages { get; set; }
-    public DbSet<RoomMember> RoomMembers { get; set; }
-    public DbSet<MessageReaction> MessageReactions { get; set; }
+    public DbSet<Story> Stories { get; set; }
+    public DbSet<Turn> Turns { get; set; }
+    public DbSet<StoryMember> StoryMembers { get; set; }
+    public DbSet<TurnReaction> TurnReactions { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseSeeding((context, _) => 
+        optionsBuilder.UseSeeding((context, _) =>
             SeedDataAsync(context, CancellationToken.None).GetAwaiter().GetResult());
-        
-        optionsBuilder.UseAsyncSeeding(async (context, _, cancellationToken) => 
+
+        optionsBuilder.UseAsyncSeeding(async (context, _, cancellationToken) =>
             await SeedDataAsync(context, cancellationToken));
     }
 
@@ -35,82 +35,82 @@ public class ChatDbContext(DbContextOptions<ChatDbContext> options) : DbContext(
             entity.Property(u => u.PasswordHash).HasMaxLength(255);
         });
 
-        // Room configuration
-        modelBuilder.Entity<Room>(entity =>
+        // Story configuration
+        modelBuilder.Entity<Story>(entity =>
         {
-            entity.HasKey(r => r.Id);
-            entity.Property(r => r.Name).HasMaxLength(100);
-            entity.Property(r => r.Description).HasMaxLength(500);
-            
-            entity.HasOne(r => r.Creator)
+            entity.HasKey(s => s.Id);
+            entity.Property(s => s.Name).HasMaxLength(100);
+            entity.Property(s => s.Description).HasMaxLength(500);
+
+            entity.HasOne(s => s.Creator)
                   .WithMany()
-                  .HasForeignKey(r => r.CreatedBy)
+                  .HasForeignKey(s => s.CreatedBy)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // Message configuration
-        modelBuilder.Entity<Message>(entity =>
+        // Turn configuration
+        modelBuilder.Entity<Turn>(entity =>
         {
-            entity.HasKey(m => m.Id);
-            entity.Property(m => m.Content).HasMaxLength(2000);
-            entity.Property(m => m.AttachmentFileName).HasMaxLength(255);
-            entity.Property(m => m.AttachmentUrl).HasMaxLength(500);
-            
-            entity.HasOne(m => m.User)
-                  .WithMany(u => u.Messages)
-                  .HasForeignKey(m => m.UserId)
+            entity.HasKey(t => t.Id);
+            entity.Property(t => t.Content).HasMaxLength(2000);
+            entity.Property(t => t.AttachmentFileName).HasMaxLength(255);
+            entity.Property(t => t.AttachmentUrl).HasMaxLength(500);
+
+            entity.HasOne(t => t.User)
+                  .WithMany(u => u.Turns)
+                  .HasForeignKey(t => t.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
-                  
-            entity.HasOne(m => m.Room)
-                  .WithMany(r => r.Messages)
-                  .HasForeignKey(m => m.RoomId)
+
+            entity.HasOne(t => t.Story)
+                  .WithMany(s => s.Turns)
+                  .HasForeignKey(t => t.StoryId)
                   .OnDelete(DeleteBehavior.Cascade);
-                  
-            entity.HasIndex(m => m.CreatedAt);
-            entity.HasIndex(m => new { m.RoomId, m.CreatedAt });
+
+            entity.HasIndex(t => t.CreatedAt);
+            entity.HasIndex(t => new { t.StoryId, t.CreatedAt });
         });
 
-        // RoomMember configuration
-        modelBuilder.Entity<RoomMember>(entity =>
+        // StoryMember configuration
+        modelBuilder.Entity<StoryMember>(entity =>
         {
-            entity.HasKey(rm => rm.Id);
-            
-            entity.HasOne(rm => rm.User)
-                  .WithMany(u => u.RoomMemberships)
-                  .HasForeignKey(rm => rm.UserId)
+            entity.HasKey(sm => sm.Id);
+
+            entity.HasOne(sm => sm.User)
+                  .WithMany(u => u.StoryMemberships)
+                  .HasForeignKey(sm => sm.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
-                  
-            entity.HasOne(rm => rm.Room)
-                  .WithMany(r => r.Members)
-                  .HasForeignKey(rm => rm.RoomId)
+
+            entity.HasOne(sm => sm.Story)
+                  .WithMany(s => s.Members)
+                  .HasForeignKey(sm => sm.StoryId)
                   .OnDelete(DeleteBehavior.Cascade);
-                  
-            entity.HasIndex(rm => new { rm.UserId, rm.RoomId }).IsUnique();
+
+            entity.HasIndex(sm => new { sm.UserId, sm.StoryId }).IsUnique();
         });
 
-        // MessageReaction configuration
-        modelBuilder.Entity<MessageReaction>(entity =>
+        // TurnReaction configuration
+        modelBuilder.Entity<TurnReaction>(entity =>
         {
-            entity.HasKey(mr => mr.Id);
-            entity.Property(mr => mr.Emoji).HasMaxLength(10);
-            
-            entity.HasOne(mr => mr.Message)
-                  .WithMany(m => m.Reactions)
-                  .HasForeignKey(mr => mr.MessageId)
+            entity.HasKey(tr => tr.Id);
+            entity.Property(tr => tr.Emoji).HasMaxLength(10);
+
+            entity.HasOne(tr => tr.Turn)
+                  .WithMany(t => t.Reactions)
+                  .HasForeignKey(tr => tr.TurnId)
                   .OnDelete(DeleteBehavior.Cascade);
-                  
-            entity.HasOne(mr => mr.User)
+
+            entity.HasOne(tr => tr.User)
                   .WithMany()
-                  .HasForeignKey(mr => mr.UserId)
+                  .HasForeignKey(tr => tr.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
-                  
-            entity.HasIndex(mr => new { mr.MessageId, mr.UserId, mr.Emoji }).IsUnique();
+
+            entity.HasIndex(tr => new { tr.TurnId, tr.UserId, tr.Emoji }).IsUnique();
         });
     }
-    
+
     private static async Task SeedDataAsync(DbContext dbContext, CancellationToken cancellationToken)
     {
-        var context = dbContext as ChatDbContext 
+        var context = dbContext as ChatDbContext
             ?? throw new InvalidOperationException("Invalid DbContext type for seeding");
 
         if (await context.Users.AnyAsync(cancellationToken)) return;
@@ -148,110 +148,103 @@ public class ChatDbContext(DbContextOptions<ChatDbContext> options) : DbContext(
         ];
         await context.Users.AddRangeAsync(users, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
-        
-        // Store user IDs before clearing change tracking
+
         var userIds = users.Select(u => u.Id).ToArray();
         context.ChangeTracker.Clear();
 
-        // Rooms
-        Room[] rooms =
+        // Stories
+        Story[] stories =
         [
-            new Room
+            new Story
             {
                 Name = "General",
-                Description = "General discussion room",
+                Description = "General collaborative story",
                 IsPrivate = false,
                 CreatedBy = userIds[0],
                 CreatedAt = DateTime.UtcNow
             },
-            new Room
+            new Story
             {
                 Name = "Bachata",
-                Description = "Bachata chat and fun",
+                Description = "A story about dance and fun",
                 IsPrivate = false,
                 CreatedBy = userIds[0],
                 CreatedAt = DateTime.UtcNow
             },
-            new Room
+            new Story
             {
                 Name = "Gym bros",
-                Description = "Chat about gym and fitness",
+                Description = "Fitness adventure",
                 IsPrivate = true,
                 CreatedBy = userIds[0],
                 CreatedAt = DateTime.UtcNow
             }
         ];
-        await context.Rooms.AddRangeAsync(rooms, cancellationToken);
+        await context.Stories.AddRangeAsync(stories, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
-        
-        // Store room IDs before clearing change tracking
-        var roomIds = rooms.Select(r => r.Id).ToArray();
+
+        var storyIds = stories.Select(s => s.Id).ToArray();
         context.ChangeTracker.Clear();
 
-        // Room members
-        RoomMember[] roomMembers = [
-            // Alice in all rooms (creator)
-            new RoomMember { UserId = userIds[0], RoomId = roomIds[0], Role = RoomRole.Admin, JoinedAt = DateTime.UtcNow },
-            new RoomMember { UserId = userIds[0], RoomId = roomIds[1], Role = RoomRole.Admin, JoinedAt = DateTime.UtcNow },
-            new RoomMember { UserId = userIds[0], RoomId = roomIds[2], Role = RoomRole.Admin, JoinedAt = DateTime.UtcNow },
-            
-            // Bob in General and Random
-            new RoomMember { UserId = userIds[1], RoomId = roomIds[0], Role = RoomRole.Member, JoinedAt = DateTime.UtcNow },
-            new RoomMember { UserId = userIds[1], RoomId = roomIds[1], Role = RoomRole.Member, JoinedAt = DateTime.UtcNow },
-            
-            // Charlie in all rooms
-            new RoomMember { UserId = userIds[2], RoomId = roomIds[0], Role = RoomRole.Member, JoinedAt = DateTime.UtcNow },
-            new RoomMember { UserId = userIds[2], RoomId = roomIds[1], Role = RoomRole.Moderator, JoinedAt = DateTime.UtcNow },
-            new RoomMember { UserId = userIds[2], RoomId = roomIds[2], Role = RoomRole.Member, JoinedAt = DateTime.UtcNow }
+        // Story members
+        StoryMember[] storyMembers = [
+            new StoryMember { UserId = userIds[0], StoryId = storyIds[0], Role = StoryRole.Admin, JoinedAt = DateTime.UtcNow },
+            new StoryMember { UserId = userIds[0], StoryId = storyIds[1], Role = StoryRole.Admin, JoinedAt = DateTime.UtcNow },
+            new StoryMember { UserId = userIds[0], StoryId = storyIds[2], Role = StoryRole.Admin, JoinedAt = DateTime.UtcNow },
+            new StoryMember { UserId = userIds[1], StoryId = storyIds[0], Role = StoryRole.Member, JoinedAt = DateTime.UtcNow },
+            new StoryMember { UserId = userIds[1], StoryId = storyIds[1], Role = StoryRole.Member, JoinedAt = DateTime.UtcNow },
+            new StoryMember { UserId = userIds[2], StoryId = storyIds[0], Role = StoryRole.Member, JoinedAt = DateTime.UtcNow },
+            new StoryMember { UserId = userIds[2], StoryId = storyIds[1], Role = StoryRole.Moderator, JoinedAt = DateTime.UtcNow },
+            new StoryMember { UserId = userIds[2], StoryId = storyIds[2], Role = StoryRole.Member, JoinedAt = DateTime.UtcNow }
         ];
-        await context.RoomMembers.AddRangeAsync(roomMembers, cancellationToken);
+        await context.StoryMembers.AddRangeAsync(storyMembers, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
         context.ChangeTracker.Clear();
 
-        // Messages
-        Message[] messages = [
-            new Message
+        // Turns
+        Turn[] turns = [
+            new Turn
             {
-                Content = "Welcome to the General room! 👋",
+                Content = "Once upon a time in the General story… 👋",
                 UserId = userIds[0],
-                RoomId = roomIds[0],
-                Type = MessageType.Text,
+                StoryId = storyIds[0],
+                Type = TurnType.Text,
                 CreatedAt = DateTime.UtcNow.AddMinutes(-30)
             },
-            new Message
+            new Turn
             {
-                Content = "Hey everyone! 🤗",
+                Content = "The plot thickened.",
                 UserId = userIds[1],
-                RoomId = roomIds[0],
-                Type = MessageType.Text,
+                StoryId = storyIds[0],
+                Type = TurnType.Text,
                 CreatedAt = DateTime.UtcNow.AddMinutes(-25)
             },
-            new Message
+            new Turn
             {
                 Content = "Holaaa",
                 UserId = userIds[2],
-                RoomId = roomIds[0],
-                Type = MessageType.Text,
+                StoryId = storyIds[0],
+                Type = TurnType.Text,
                 CreatedAt = DateTime.UtcNow.AddMinutes(-20)
             },
-            new Message
+            new Turn
             {
-                Content = "Welcome to the Bachata room! 😎",
+                Content = "The dance floor shimmered under the lights. 😎",
                 UserId = userIds[1],
-                RoomId = roomIds[1],
-                Type = MessageType.Text,
+                StoryId = storyIds[1],
+                Type = TurnType.Text,
                 CreatedAt = DateTime.UtcNow.AddMinutes(-15)
             },
-            new Message
+            new Turn
             {
                 Content = "Lightweighttttt",
                 UserId = userIds[0],
-                RoomId = roomIds[2],
-                Type = MessageType.Text,
+                StoryId = storyIds[2],
+                Type = TurnType.Text,
                 CreatedAt = DateTime.UtcNow.AddMinutes(-10)
             }
         ];
-        await context.Messages.AddRangeAsync(messages, cancellationToken);
+        await context.Turns.AddRangeAsync(turns, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
     }
 }

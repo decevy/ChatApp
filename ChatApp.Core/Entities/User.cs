@@ -26,6 +26,6 @@ public class User
     public DateTime? RefreshTokenExpiry { get; set; }
 
     // Navigation properties
-    public ICollection<Message> Messages { get; set; } = [];
-    public ICollection<RoomMember> RoomMemberships { get; set; } = [];
+    public ICollection<Turn> Turns { get; set; } = [];
+    public ICollection<StoryMember> StoryMemberships { get; set; } = [];
 }

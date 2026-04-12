@@ -1,6 +1,6 @@
 namespace ChatApp.Core.Entities;
 
-public enum RoomRole
+public enum StoryRole
 {
     Member,
     Moderator,

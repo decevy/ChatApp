@@ -9,25 +9,24 @@ namespace ChatApp.Api.Hubs;
 
 [Authorize]
 public class ChatHub(
-    IMessageRepository messageRepository,
-    IRoomRepository roomRepository,
+    ITurnRepository turnRepository,
+    IStoryRepository storyRepository,
     IUserRepository userRepository,
     ILogger<ChatHub> logger) : Hub
 {
     private static class EventNames
     {
         public const string
-            UserJoinedRoom = "UserJoinedRoom",
-            UserLeftRoom = "UserLeftRoom",
-            ReceiveMessage = "ReceiveMessage",
-            MessageEdited = "MessageEdited",
-            MessageDeleted = "MessageDeleted",
+            UserJoinedStory = "UserJoinedStory",
+            UserLeftStory = "UserLeftStory",
+            ReceiveTurn = "ReceiveTurn",
+            TurnEdited = "TurnEdited",
+            TurnDeleted = "TurnDeleted",
             UserStartedTyping = "UserStartedTyping",
             UserStoppedTyping = "UserStoppedTyping",
             UserStatusChanged = "UserStatusChanged";
     }
 
-    // Connection Management
     public override async Task OnConnectedAsync()
     {
         var userId = GetUserId();
@@ -52,146 +51,135 @@ public class ChatHub(
         await base.OnDisconnectedAsync(exception);
     }
 
-    // Room Operations
-    public async Task JoinRoom(int roomId)
+    public async Task JoinStory(int storyId)
     {
         var userId = GetUserId();
 
-        // Verify user has access to this room
-        var isMember = await roomRepository.IsUserMemberAsync(roomId, userId);
+        var isMember = await storyRepository.IsUserMemberAsync(storyId, userId);
         if (!isMember)
-            throw new HubException("You are not a member of this room");
+            throw new HubException("You are not a collaborator on this story");
 
-        var groupName = GetGroupName(roomId);
+        var groupName = GetGroupName(storyId);
         await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
 
-        // Notify others in the room
         await Clients.OthersInGroup(groupName).SendAsync(
-            EventNames.UserJoinedRoom,
-            new RoomEventDto { UserId = userId, RoomId = roomId, Timestamp = DateTime.UtcNow }
+            EventNames.UserJoinedStory,
+            new StoryEventDto { UserId = userId, StoryId = storyId, Timestamp = DateTime.UtcNow }
         );
 
-        logger.LogInformation("User {userId} joined room {roomId}", userId, roomId);
+        logger.LogInformation("User {userId} joined story {storyId}", userId, storyId);
     }
 
-    public async Task LeaveRoom(int roomId)
+    public async Task LeaveStory(int storyId)
     {
         var userId = GetUserId();
 
-        var groupName = GetGroupName(roomId);
+        var groupName = GetGroupName(storyId);
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
 
-        // Notify others in the room
         await Clients.OthersInGroup(groupName).SendAsync(
-            EventNames.UserLeftRoom,
-            new RoomEventDto { UserId = userId, RoomId = roomId, Timestamp = DateTime.UtcNow }
+            EventNames.UserLeftStory,
+            new StoryEventDto { UserId = userId, StoryId = storyId, Timestamp = DateTime.UtcNow }
         );
 
-        logger.LogInformation("User {userId} left room {roomId}", userId, roomId);
+        logger.LogInformation("User {userId} left story {storyId}", userId, storyId);
     }
 
-    // Message Operations
-    public async Task SendMessage(int roomId, string content)
+    public async Task SendTurn(int storyId, string content)
     {
         var userId = GetUserId();
 
-        // Verify user has access to this room
-        var isMember = await roomRepository.IsUserMemberAsync(roomId, userId);
+        var isMember = await storyRepository.IsUserMemberAsync(storyId, userId);
         if (!isMember)
-            throw new HubException("You are not a member of this room");
+            throw new HubException("You are not a collaborator on this story");
 
         var user = await userRepository.GetByIdAsync(userId)
             ?? throw new HubException("User not found");
 
-        // Create and save message
-        var message = new Message
+        var turn = new Turn
         {
             Content = content,
             UserId = userId,
-            RoomId = roomId,
-            Type = MessageType.Text,
+            StoryId = storyId,
+            Type = TurnType.Text,
             CreatedAt = DateTime.UtcNow,
             User = user
         };
-        await messageRepository.CreateAsync(message);
+        await turnRepository.CreateAsync(turn);
 
-        // Send to all clients in the room (including sender)
-        await Clients.Group(GetGroupName(roomId)).SendAsync(
-            EventNames.ReceiveMessage,
-            MessageDto.FromEntity(message)
+        await Clients.Group(GetGroupName(storyId)).SendAsync(
+            EventNames.ReceiveTurn,
+            TurnDto.FromEntity(turn)
         );
 
-        logger.LogInformation("User {userId} sent message to room {roomId}", userId, roomId);
+        logger.LogInformation("User {userId} added a turn to story {storyId}", userId, storyId);
     }
 
-    public async Task EditMessage(int messageId, string newContent)
+    public async Task EditTurn(int turnId, string newContent)
     {
         var userId = GetUserId();
-        var message = await messageRepository.GetByIdAsync(messageId)
-            ?? throw new HubException("Message not found");
+        var turn = await turnRepository.GetByIdAsync(turnId)
+            ?? throw new HubException("Turn not found");
 
-        if (message.UserId != userId)
-            throw new HubException("You can only edit your own messages");
+        if (turn.UserId != userId)
+            throw new HubException("You can only edit your own turns");
 
-        message.Content = newContent;
-        message.EditedAt = DateTime.UtcNow;
+        turn.Content = newContent;
+        turn.EditedAt = DateTime.UtcNow;
 
-        await messageRepository.UpdateAsync(message);
+        await turnRepository.UpdateAsync(turn);
 
-        // Notify all clients in the room
-        await Clients.Group(GetGroupName(message.RoomId)).SendAsync(
-            EventNames.MessageEdited,
-            new MessageEditedDto
+        await Clients.Group(GetGroupName(turn.StoryId)).SendAsync(
+            EventNames.TurnEdited,
+            new TurnEditedDto
             {
-                Id = messageId,
+                Id = turnId,
                 Content = newContent,
-                EditedAt = message.EditedAt.Value
+                EditedAt = turn.EditedAt.Value
             }
         );
     }
 
-    public async Task DeleteMessage(int messageId)
+    public async Task DeleteTurn(int turnId)
     {
         var userId = GetUserId();
-        var message = await messageRepository.GetByIdAsync(messageId)
-            ?? throw new HubException("Message not found");
+        var turn = await turnRepository.GetByIdAsync(turnId)
+            ?? throw new HubException("Turn not found");
 
-        if (message.UserId != userId)
-            throw new HubException("You can only delete your own messages");
+        if (turn.UserId != userId)
+            throw new HubException("You can only delete your own turns");
 
-        await messageRepository.DeleteAsync(messageId);
+        var storyId = turn.StoryId;
+        await turnRepository.DeleteAsync(turnId);
 
-        // Notify all clients in the room
-        await Clients.Group(GetGroupName(message.RoomId)).SendAsync(
-            EventNames.MessageDeleted,
-            new MessageDeletedDto { Id = messageId, RoomId = message.RoomId }
+        await Clients.Group(GetGroupName(storyId)).SendAsync(
+            EventNames.TurnDeleted,
+            new TurnDeletedDto { Id = turnId, StoryId = storyId }
         );
     }
 
-    // Typing Indicators
-    public async Task StartTyping(int roomId)
+    public async Task StartTyping(int storyId)
     {
         var userId = GetUserId();
         var user = await userRepository.GetByIdAsync(userId);
 
-        await Clients.OthersInGroup(GetGroupName(roomId)).SendAsync(
+        await Clients.OthersInGroup(GetGroupName(storyId)).SendAsync(
             EventNames.UserStartedTyping,
-            new TypingIndicatorDto { UserId = userId, Username = user?.Username ?? "Unknown", RoomId = roomId }
+            new TypingIndicatorDto { UserId = userId, Username = user?.Username ?? "Unknown", StoryId = storyId }
         );
     }
 
-    public async Task StopTyping(int roomId)
+    public async Task StopTyping(int storyId)
     {
         var userId = GetUserId();
 
-        await Clients.OthersInGroup(GetGroupName(roomId)).SendAsync(
+        await Clients.OthersInGroup(GetGroupName(storyId)).SendAsync(
             EventNames.UserStoppedTyping,
-            new TypingIndicatorDto { UserId = userId, RoomId = roomId }
+            new TypingIndicatorDto { UserId = userId, StoryId = storyId }
         );
     }
 
-    // Helper Methods
-    private static string GetGroupName(int roomId) => $"room_{roomId}";
+    private static string GetGroupName(int storyId) => $"story_{storyId}";
 
     private int GetUserId()
     {
@@ -208,7 +196,6 @@ public class ChatHub(
             user.LastSeen = DateTime.UtcNow;
             await userRepository.UpdateAsync(user);
 
-            // Broadcast status change to all connected clients
             await Clients.All.SendAsync(
                 EventNames.UserStatusChanged,
                 new UserStatusChangedDto { UserId = userId, IsOnline = isOnline, LastSeen = user.LastSeen }

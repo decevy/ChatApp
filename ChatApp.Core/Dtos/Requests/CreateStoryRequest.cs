@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ChatApp.Core.Dtos.Requests;
 
-public class CreateRoomRequest
+public class CreateStoryRequest
 {
     [Required]
     [StringLength(100, MinimumLength = 1)]

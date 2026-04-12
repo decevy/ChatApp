@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ChatApp.Core.Entities;
 
-public class Room
+public class Story
 {
     public int Id { get; set; }
 
@@ -19,6 +19,6 @@ public class Room
 
     // Navigation properties
     public User Creator { get; set; } = null!;
-    public ICollection<Message> Messages { get; set; } = [];
-    public ICollection<RoomMember> Members { get; set; } = [];
+    public ICollection<Turn> Turns { get; set; } = [];
+    public ICollection<StoryMember> Members { get; set; } = [];
 }

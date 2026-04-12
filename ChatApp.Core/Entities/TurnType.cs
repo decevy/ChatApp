@@ -1,6 +1,6 @@
 namespace ChatApp.Core.Entities;
 
-public enum MessageType
+public enum TurnType
 {
     Text,
     Image,

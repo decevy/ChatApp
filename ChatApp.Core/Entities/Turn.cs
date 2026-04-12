@@ -2,24 +2,24 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ChatApp.Core.Entities;
 
-public class Message
+public class Turn
 {
     public int Id { get; set; }
 
     [Required]
     public string Content { get; set; } = string.Empty;
-    
+
     public int UserId { get; set; }
-    public int RoomId { get; set; }
+    public int StoryId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? EditedAt { get; set; }
-    
+
     public string? AttachmentUrl { get; set; }
     public string? AttachmentFileName { get; set; }
-    public MessageType Type { get; set; } = MessageType.Text;
+    public TurnType Type { get; set; } = TurnType.Text;
 
     // Navigation properties
     public User User { get; set; } = null!;
-    public Room Room { get; set; } = null!;
-    public ICollection<MessageReaction> Reactions { get; set; } = [];
+    public Story Story { get; set; } = null!;
+    public ICollection<TurnReaction> Reactions { get; set; } = [];
 }

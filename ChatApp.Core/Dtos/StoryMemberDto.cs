@@ -2,7 +2,7 @@ using ChatApp.Core.Entities;
 
 namespace ChatApp.Core.Dtos;
 
-public class RoomMemberDto
+public class StoryMemberDto
 {
     public int UserId { get; set; }
     public string Username { get; set; } = string.Empty;
@@ -10,7 +10,7 @@ public class RoomMemberDto
     public string Role { get; set; } = string.Empty;
     public DateTime JoinedAt { get; set; }
 
-    public static RoomMemberDto FromEntity(RoomMember member) => new RoomMemberDto
+    public static StoryMemberDto FromEntity(StoryMember member) => new StoryMemberDto
     {
         UserId = member.UserId,
         Username = member.User.Username,

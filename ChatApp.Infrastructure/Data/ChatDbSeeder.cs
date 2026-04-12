@@ -7,13 +7,9 @@ public static class ChatDbSeeder
 {
     public static async Task SeedAsync(ChatDbContext context)
     {
-        // Check if we already have data
         if (await context.Users.AnyAsync())
-        {
-            return; // Database has been seeded
-        }
+            return;
 
-        // Create test users
         var users = new List<User>
         {
             new User
@@ -49,107 +45,99 @@ public static class ChatDbSeeder
         await context.SaveChangesAsync();
         context.ChangeTracker.Clear();
 
-        // Create test rooms
-        var rooms = new List<Room>
+        var stories = new List<Story>
         {
-            new Room
+            new Story
             {
                 Name = "General",
-                Description = "General discussion room",
+                Description = "General collaborative story",
                 IsPrivate = false,
                 CreatedBy = users[0].Id,
                 CreatedAt = DateTime.UtcNow
             },
-            new Room
+            new Story
             {
                 Name = "Bachata",
-                Description = "Bachata chat and fun",
+                Description = "A story about dance and fun",
                 IsPrivate = false,
                 CreatedBy = users[0].Id,
                 CreatedAt = DateTime.UtcNow
             },
-            new Room
+            new Story
             {
                 Name = "Gym bros",
-                Description = "Chat about gym and fitness",
+                Description = "Fitness adventure",
                 IsPrivate = true,
                 CreatedBy = users[0].Id,
                 CreatedAt = DateTime.UtcNow
             }
         };
 
-        await context.Rooms.AddRangeAsync(rooms);
+        await context.Stories.AddRangeAsync(stories);
         await context.SaveChangesAsync();
         context.ChangeTracker.Clear();
 
-        // Add users to rooms
-        var roomMembers = new List<RoomMember>
+        var storyMembers = new List<StoryMember>
         {
-            // Alice in all rooms (creator)
-            new RoomMember { UserId = users[0].Id, RoomId = rooms[0].Id, Role = RoomRole.Admin, JoinedAt = DateTime.UtcNow },
-            new RoomMember { UserId = users[0].Id, RoomId = rooms[1].Id, Role = RoomRole.Admin, JoinedAt = DateTime.UtcNow },
-            new RoomMember { UserId = users[0].Id, RoomId = rooms[2].Id, Role = RoomRole.Admin, JoinedAt = DateTime.UtcNow },
-            
-            // Bob in General and Random
-            new RoomMember { UserId = users[1].Id, RoomId = rooms[0].Id, Role = RoomRole.Member, JoinedAt = DateTime.UtcNow },
-            new RoomMember { UserId = users[1].Id, RoomId = rooms[1].Id, Role = RoomRole.Member, JoinedAt = DateTime.UtcNow },
-            
-            // Charlie in all rooms
-            new RoomMember { UserId = users[2].Id, RoomId = rooms[0].Id, Role = RoomRole.Member, JoinedAt = DateTime.UtcNow },
-            new RoomMember { UserId = users[2].Id, RoomId = rooms[1].Id, Role = RoomRole.Moderator, JoinedAt = DateTime.UtcNow },
-            new RoomMember { UserId = users[2].Id, RoomId = rooms[2].Id, Role = RoomRole.Member, JoinedAt = DateTime.UtcNow }
+            new StoryMember { UserId = users[0].Id, StoryId = stories[0].Id, Role = StoryRole.Admin, JoinedAt = DateTime.UtcNow },
+            new StoryMember { UserId = users[0].Id, StoryId = stories[1].Id, Role = StoryRole.Admin, JoinedAt = DateTime.UtcNow },
+            new StoryMember { UserId = users[0].Id, StoryId = stories[2].Id, Role = StoryRole.Admin, JoinedAt = DateTime.UtcNow },
+            new StoryMember { UserId = users[1].Id, StoryId = stories[0].Id, Role = StoryRole.Member, JoinedAt = DateTime.UtcNow },
+            new StoryMember { UserId = users[1].Id, StoryId = stories[1].Id, Role = StoryRole.Member, JoinedAt = DateTime.UtcNow },
+            new StoryMember { UserId = users[2].Id, StoryId = stories[0].Id, Role = StoryRole.Member, JoinedAt = DateTime.UtcNow },
+            new StoryMember { UserId = users[2].Id, StoryId = stories[1].Id, Role = StoryRole.Moderator, JoinedAt = DateTime.UtcNow },
+            new StoryMember { UserId = users[2].Id, StoryId = stories[2].Id, Role = StoryRole.Member, JoinedAt = DateTime.UtcNow }
         };
 
-        await context.RoomMembers.AddRangeAsync(roomMembers);
+        await context.StoryMembers.AddRangeAsync(storyMembers);
         await context.SaveChangesAsync();
         context.ChangeTracker.Clear();
 
-        // Add some initial messages
-        var messages = new List<Message>
+        var turns = new List<Turn>
         {
-            new Message
+            new Turn
             {
-                Content = "Welcome to the General room! 👋",
+                Content = "Once upon a time in the General story… 👋",
                 UserId = users[0].Id,
-                RoomId = rooms[0].Id,
-                Type = MessageType.Text,
+                StoryId = stories[0].Id,
+                Type = TurnType.Text,
                 CreatedAt = DateTime.UtcNow.AddMinutes(-30)
             },
-            new Message
+            new Turn
             {
-                Content = "Hey everyone! 🤗",
+                Content = "The plot thickened.",
                 UserId = users[1].Id,
-                RoomId = rooms[0].Id,
-                Type = MessageType.Text,
+                StoryId = stories[0].Id,
+                Type = TurnType.Text,
                 CreatedAt = DateTime.UtcNow.AddMinutes(-25)
             },
-            new Message
+            new Turn
             {
                 Content = "Holaaa",
                 UserId = users[2].Id,
-                RoomId = rooms[0].Id,
-                Type = MessageType.Text,
+                StoryId = stories[0].Id,
+                Type = TurnType.Text,
                 CreatedAt = DateTime.UtcNow.AddMinutes(-20)
             },
-            new Message
+            new Turn
             {
-                Content = "Welcome to the Bachata room! 😎",
+                Content = "The dance floor shimmered under the lights. 😎",
                 UserId = users[1].Id,
-                RoomId = rooms[1].Id,
-                Type = MessageType.Text,
+                StoryId = stories[1].Id,
+                Type = TurnType.Text,
                 CreatedAt = DateTime.UtcNow.AddMinutes(-15)
             },
-            new Message
+            new Turn
             {
                 Content = "Lightweighttttt",
                 UserId = users[0].Id,
-                RoomId = rooms[2].Id,
-                Type = MessageType.Text,
+                StoryId = stories[2].Id,
+                Type = TurnType.Text,
                 CreatedAt = DateTime.UtcNow.AddMinutes(-10)
             }
         };
 
-        await context.Messages.AddRangeAsync(messages);
+        await context.Turns.AddRangeAsync(turns);
         await context.SaveChangesAsync();
     }
 }

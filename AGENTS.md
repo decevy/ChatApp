@@ -1,6 +1,8 @@
-# Agent instructions — ChatApp (repository root)
+# Agent instructions — .NET solution (`ChatApp/`)
 
-Use this file together with **nested `AGENTS.md`** files: when your workspace or active files are under a project folder, tooling may merge guidance from the root down into that folder. Prefer the **most specific** instructions for the code you are editing.
+This file covers the **backend solution only**. For the full repo (React + .NET) and how they integrate, see **`AGENTS.md`** in the **parent directory** (monorepo root).
+
+Use this file together with **nested `AGENTS.md`** files under each project: prefer the **most specific** instructions for the code you are editing.
 
 ---
 

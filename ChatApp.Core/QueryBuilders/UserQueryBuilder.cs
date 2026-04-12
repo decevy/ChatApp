@@ -9,23 +9,23 @@ public class UserQueryBuilder(IQueryable<User> query)
     private IQueryable<User> _query = query;
 
     #region Include properties
-    public UserQueryBuilder WithMessages()
+    public UserQueryBuilder WithTurns()
     {
-        _query = _query.Include(u => u.Messages);
+        _query = _query.Include(u => u.Turns);
         return this;
     }
 
-    public UserQueryBuilder WithRoomMemberships(bool includeRooms = false)
+    public UserQueryBuilder WithStoryMemberships(bool includeStories = false)
     {
         _query = _query
-            .Include(u => u.RoomMemberships)
-            .ThenIncludeIf(includeRooms, rm => rm.Room);
+            .Include(u => u.StoryMemberships)
+            .ThenIncludeIf(includeStories, sm => sm.Story);
         return this;
     }
 
     public UserQueryBuilder WithFullDetails()
     {
-        return WithMessages().WithRoomMemberships(includeRooms: true);
+        return WithTurns().WithStoryMemberships(includeStories: true);
     }
     #endregion
 

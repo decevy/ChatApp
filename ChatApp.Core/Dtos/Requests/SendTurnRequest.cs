@@ -3,13 +3,13 @@ using ChatApp.Core.Entities;
 
 namespace ChatApp.Core.Dtos.Requests;
 
-public class SendMessageRequest
+public class SendTurnRequest
 {
     [Required]
     public string Content { get; set; } = string.Empty;
 
     [Required]
-    public int RoomId { get; set; }
+    public int StoryId { get; set; }
 
-    public MessageType Type { get; set; } = MessageType.Text;
+    public TurnType Type { get; set; } = TurnType.Text;
 }

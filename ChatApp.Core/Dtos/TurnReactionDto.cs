@@ -1,6 +1,6 @@
 namespace ChatApp.Core.Dtos;
 
-public class MessageReactionDto
+public class TurnReactionDto
 {
     public string Emoji { get; set; } = string.Empty;
     public List<UserDto> Users { get; set; } = new();
