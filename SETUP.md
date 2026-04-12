@@ -1,4 +1,4 @@
-# ChatApp - Local Development Setup
+# StoryApp - Local Development Setup
 
 ## Prerequisites
 - Docker Desktop installed and running
@@ -22,12 +22,12 @@ You should see three services running:
 - `chatapp-pgadmin` on port 5050
 
 ### 2. Update appsettings.Development.json
-Place the provided `appsettings.Development.json` in your `src/ChatApp.API/` directory.
+Place the provided `appsettings.Development.json` in your `src/StoryApp.API/` directory.
 
 ### 3. Apply Database Migration
 ```bash
 # Navigate to the API project
-cd src/ChatApp.API
+cd src/StoryApp.API
 
 # Apply the existing migration
 dotnet ef database update
@@ -38,7 +38,7 @@ dotnet ef migrations list
 
 ### 4. Run the API
 ```bash
-# From src/ChatApp.API
+# From src/StoryApp.API
 dotnet run
 
 # Or use your IDE's run/debug functionality
@@ -61,7 +61,7 @@ The API should start on `https://localhost:7001` and `http://localhost:5001`
 
 To connect to your database in pgAdmin:
 1. Right-click "Servers" → "Register" → "Server"
-2. General Tab: Name = "ChatApp Dev"
+2. General Tab: Name = "StoryApp Dev"
 3. Connection Tab:
    - Host: postgres (use container name, not localhost)
    - Port: 5432
@@ -117,8 +117,8 @@ dotnet ef database update
 If you want to reset the database and re-run the seed data:
 
 ```bash
-# Option 1: Using EF Core (from ChatApp.Api directory)
-cd ChatApp.Api
+# Option 1: Using EF Core (from StoryApp.Api directory)
+cd StoryApp.Api
 dotnet ef database drop --force
 dotnet ef database update
 dotnet run  # Seed data runs on startup
@@ -126,7 +126,7 @@ dotnet run  # Seed data runs on startup
 # Option 2: Using Docker (complete reset)
 docker-compose down -v  # Remove all volumes including database
 docker-compose up -d
-cd ChatApp.Api
+cd StoryApp.Api
 dotnet ef database update
 dotnet run  # Seed data runs on startup
 ```
@@ -152,7 +152,7 @@ ports:
 Then update your connection string accordingly.
 
 ### Migration fails
-- Ensure previous migration was created: Check `src/ChatApp.Infrastructure/Migrations/`
+- Ensure previous migration was created: Check `src/StoryApp.Infrastructure/Migrations/`
 - Try removing and recreating: `dotnet ef migrations remove` then `dotnet ef migrations add Initial`
 
 ## Next Steps

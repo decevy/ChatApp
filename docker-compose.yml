@@ -1,26 +1,26 @@
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: chatapp-postgres
+    container_name: storyapp-postgres
     environment:
-      POSTGRES_DB: chatappdb_dev
-      POSTGRES_USER: chatapp_user
+      POSTGRES_DB: storyappdb_dev
+      POSTGRES_USER: storyapp_user
       POSTGRES_PASSWORD: dev_password_123
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U chatapp_user -d chatappdb_dev"]
+      test: ["CMD-SHELL", "pg_isready -U storyapp_user -d storyappdb_dev"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - chatapp-network
+      - storyapp-network
 
   redis:
     image: redis:7-alpine
-    container_name: chatapp-redis
+    container_name: storyapp-redis
     ports:
       - "6379:6379"
     volumes:
@@ -31,13 +31,13 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - chatapp-network
+      - storyapp-network
 
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: chatapp-pgadmin
+    container_name: storyapp-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@chatapp.dev
+      PGADMIN_DEFAULT_EMAIL: admin@storyapp.dev
       PGADMIN_DEFAULT_PASSWORD: admin123
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
@@ -48,7 +48,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - chatapp-network
+      - storyapp-network
 
 volumes:
   postgres_data:
@@ -56,5 +56,5 @@ volumes:
   pgadmin_data:
 
 networks:
-  chatapp-network:
+  storyapp-network:
     driver: bridge

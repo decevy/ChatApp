@@ -1,7 +1,7 @@
-# ChatApp - Application Specification
+# StoryApp - Application Specification
 
 ## Overview
-ChatApp is a real-time chat application consisting of a .NET 9 backend API and a React TypeScript frontend. Users can create and join chat rooms, send messages, and interact in real-time through SignalR WebSocket connections.
+StoryApp is a real-time chat application consisting of a .NET 9 backend API and a React TypeScript frontend. Users can create and join chat rooms, send messages, and interact in real-time through SignalR WebSocket connections.
 
 ## Architecture
 
@@ -22,10 +22,10 @@ ChatApp is a real-time chat application consisting of a .NET 9 backend API and a
 - date-fns for date formatting
 
 **Project Structure:**
-- `ChatApp.Core` - Domain layer (entities, DTOs, interfaces)
-- `ChatApp.Infrastructure` - Data access layer (EF Core, repositories)
-- `ChatApp.Services` - Business logic layer
-- `ChatApp.Api` - Web API layer (controllers, SignalR hub)
+- `StoryApp.Core` - Domain layer (entities, DTOs, interfaces)
+- `StoryApp.Infrastructure` - Data access layer (EF Core, repositories)
+- `StoryApp.Services` - Business logic layer
+- `StoryApp.Api` - Web API layer (controllers, SignalR hub)
 - `chatapp-web` - React frontend application
 
 ## Core Features
@@ -217,7 +217,7 @@ ChatApp is a real-time chat application consisting of a .NET 9 backend API and a
 - `GET /api/users` - Get all users (authenticated)
   - Returns: `List<UserDto>`
 
-### SignalR Hub (`/chatHub`)
+### SignalR Hub (`/storyHub`)
 
 **Connection:**
 - Requires JWT authentication via query parameter: `?access_token={token}`
@@ -345,8 +345,8 @@ The application seeds the database with:
 
 ### JWT Settings
 - Secret key configuration
-- Issuer: `ChatApp.API.Dev`
-- Audience: `ChatApp.Web.Dev`
+- Issuer: `StoryApp.API.Dev`
+- Audience: `StoryApp.Web.Dev`
 - Access token expiry: 24 hours (1440 minutes)
 - Refresh token expiry: 7 days
 
